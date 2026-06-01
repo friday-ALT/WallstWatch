@@ -324,7 +324,7 @@ function renderBankMap(){
 function renderCredit(){
   document.getElementById('cv').innerHTML=`<div style="margin-bottom:16px;"><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;">DIMON'S NINE PILLARS OF CREDIT</div><div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Click any pillar to expand full analysis with case studies and actionable signals</div></div>`+
   P.map((p,i)=>{
-    const bl=Array.from({length:10},(_,j)=>`<div class="b ${j<p.rk?(p.rk>=9?'r':p.rk>=7?'o':'g'):''}"></div>`).join('');
+    const bl=Array.from({length:10},(_,j)=>`<div class="b ${j<p.rk?(p.rk>=9?'r':p.rk>=7?'o':'g'):''}">`+'</div>').join('');
     const rc=p.rk>=9?'var(--critical)':p.rk>=8?'var(--high)':'var(--elevated)';
     return `<div class="pfc" id="pc-${i}"><div class="pfc-top" onclick="togPillar(${i})"><div class="pfc-left"><div class="pfc-num">${p.n}</div><div><div class="pfc-name">${p.nm}</div><div class="pfc-sub">${p.sub}</div></div></div><div class="pfc-right"><div class="prb">${bl}</div><div class="prl" style="background:${rc}15;color:${rc};border:1px solid ${rc}40">${p.rl}</div><div class="pfc-arrow">▼</div></div></div>
     <div class="pfc-body"><div class="pdesc">${p.desc}</div><div class="psg">${p.stats.map(s=>`<div class="psb"><div class="n">${s.v}</div><div class="lb">${s.l}</div></div>`).join('')}</div>
