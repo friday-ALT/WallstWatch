@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WALLST WATCH | Banking Command Center</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap');
+:root {
+  --bg-dark:#0a0c0f;--bg-panel:#0f1216;--bg-card:#141820;--border:#1e2530;--border-glow:#2a3040;
+  --text-primary:#e8eaed;--text-secondary:#8b95a5;--text-dim:#4a5568;
+  --accent-red:#ff3b3b;--accent-green:#00e676;--accent-amber:#ffc107;--accent-blue:#2196f3;--accent-cyan:#00bcd4;
+  --critical:#ff1744;--high:#ff6d00;--elevated:#ffc400;--moderate:#00e676;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg-dark);color:var(--text-primary);font-family:'Inter',sans-serif;overflow-x:hidden;min-height:100vh;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:var(--bg-dark);}::-webkit-scrollbar-thumb{background:var(--border-glow);border-radius:2px;}
+
+.ticker-bar{height:32px;background:linear-gradient(180deg,#0d1015,#0a0c0f);border-bottom:1px solid var(--border);display:flex;align-items:center;overflow:hidden;}
+.ticker-scroll{display:flex;animation:tickerScroll 60s linear infinite;white-space:nowrap;}
+@keyframes tickerScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.ticker-item{display:flex;align-items:center;gap:6px;padding:0 18px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;border-right:1px solid var(--border);}
+.ticker-item .symbol{color:var(--text-secondary);font-weight:600;}.ticker-item .price{color:var(--text-primary);}
+.ticker-item .change.up{color:var(--accent-green);}.ticker-item .change.down{color:var(--accent-red);}
+
+.header{height:48px;background:var(--bg-panel);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
+.header-left{display:flex;align-items:center;gap:20px;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;}.logo span:first-child{color:var(--text-primary);}.logo span:last-child{color:var(--accent-red);}
+.nav-tabs{display:flex;gap:4px;}
+.nav-tab{padding:6px 14px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-secondary);cursor:pointer;border-radius:3px;transition:all .2s;user-select:none;}
+.nav-tab:hover{color:var(--text-primary);background:var(--bg-card);}.nav-tab.active{color:var(--accent-red);background:rgba(255,59,59,.08);}
+.header-right{display:flex;align-items:center;gap:14px;}
+.live-badge{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-secondary);}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent-red);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(255,59,59,.4)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(255,59,59,0)}}
+.bank-count{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent-amber);background:rgba(255,193,7,.08);padding:4px 10px;border:1px solid rgba(255,193,7,.2);border-radius:3px;}
+
+.main-grid{display:grid;grid-template-columns:240px 1fr 300px;height:calc(100vh - 108px);gap:0;}
+.left-panel{background:var(--bg-panel);border-right:1px solid var(--border);overflow-y:auto;}
+.panel-section{border-bottom:1px solid var(--border);}
+.panel-header{display:flex;align-items:center;gap:8px;padding:12px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent-red);}
+.panel-header .dot{width:5px;height:5px;border-radius:50%;background:var(--accent-red);}
+.news-item{padding:10px 14px;border-bottom:1px solid rgba(30,37,48,.5);cursor:pointer;transition:background .2s;}.news-item:hover{background:var(--bg-card);}
+.news-item .time{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;}
+.news-item .headline{font-size:12px;color:var(--text-secondary);line-height:1.5;}.news-item .headline strong{color:var(--text-primary);font-weight:600;}
+.commodity-row{display:flex;justify-content:space-between;align-items:center;padding:6px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;}
+.commodity-row .name{color:var(--text-secondary);}.commodity-row .price{color:var(--text-primary);}
+.commodity-row .chg.up{color:var(--accent-green);}.commodity-row .chg.down{color:var(--accent-red);}
+
+.center-panel{background:var(--bg-dark);overflow-y:auto;position:relative;}
+.center-header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);background:rgba(10,12,15,.95);position:sticky;top:0;z-index:10;}
+.center-title{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-secondary);}.center-title span{color:var(--accent-red);}
+
+.right-panel{background:var(--bg-panel);border-left:1px solid var(--border);overflow-y:auto;}
+.detail-header{padding:14px;border-bottom:1px solid var(--border);}
+.detail-title{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent-red);}
+.detail-content{padding:14px;}
+
+.bank-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px;}
+.bank-card{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:all .3s;overflow:hidden;}
+.bank-card:hover{border-color:var(--accent-red);box-shadow:0 0 20px rgba(255,59,59,.08);transform:translateY(-2px);}
+.bank-card.selected{border-color:var(--accent-red);box-shadow:0 0 30px rgba(255,59,59,.15);}
+.bank-card-header{padding:14px 16px 10px;display:flex;justify-content:space-between;align-items:flex-start;}
+.bank-symbol{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;}
+.brb{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:2px;}
+.rc{background:rgba(255,23,68,.15);color:var(--critical);border:1px solid rgba(255,23,68,.3);}
+.rh{background:rgba(255,109,0,.15);color:var(--high);border:1px solid rgba(255,109,0,.3);}
+.re{background:rgba(255,196,0,.15);color:var(--elevated);border:1px solid rgba(255,196,0,.3);}
+.rm{background:rgba(0,230,118,.1);color:var(--moderate);border:1px solid rgba(0,230,118,.2);}
+.bank-name{padding:0 16px;font-size:12px;color:var(--text-secondary);font-weight:500;}
+.bank-metrics{padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.bm{display:flex;flex-direction:column;gap:2px;}.bm .l{font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text-dim);}
+.bm .v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;}.v.up{color:var(--accent-green);}.v.down{color:var(--accent-red);}.v.n{color:var(--text-primary);}
+.bank-bar{height:3px;background:var(--border);margin-top:4px;}.bank-bar-fill{height:100%;border-radius:1px;}
+
+.detail-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.ds{background:var(--bg-card);border-radius:4px;padding:10px;}.ds .l{font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
+.ds .val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;}
+.dd{height:1px;background:var(--border);margin:16px 0;}
+.dst{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:10px;}
+.dsig{padding:8px 10px;background:var(--bg-card);border-radius:4px;margin-bottom:6px;font-size:11px;color:var(--text-secondary);line-height:1.5;border-left:2px solid var(--border);}
+.dsig.warn{border-left-color:var(--accent-red);}.dsig.ok{border-left-color:var(--accent-green);}.dsig.caution{border-left-color:var(--accent-amber);}
+.dq{background:linear-gradient(135deg,rgba(255,59,59,.04),transparent);border:1px solid rgba(255,59,59,.1);border-radius:4px;padding:12px 14px;margin-top:12px;}
+.dq .t{font-size:12px;font-style:italic;color:var(--text-secondary);line-height:1.6;margin-bottom:6px;}
+.dq .a{font-size:9px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;}
+.signal-tags{display:flex;flex-wrap:wrap;gap:4px;}.stag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;background:rgba(33,150,243,.08);color:var(--accent-blue);border:1px solid rgba(33,150,243,.15);border-radius:2px;}
+.psr{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(30,37,48,.5);}
+.psr .l{font-size:11px;color:var(--text-secondary);}.psr .v{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--text-primary);}
+
+/* CREDIT */
+.credit-view{padding:16px;}
+.pfc{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;margin-bottom:12px;overflow:hidden;transition:all .3s;}
+.pfc:hover{border-color:rgba(255,59,59,.3);}
+.pfc.expanded{border-color:var(--accent-cyan);box-shadow:0 0 20px rgba(0,188,212,.06);}
+.pfc-top{padding:16px 18px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.pfc-left{display:flex;align-items:center;gap:14px;}
+.pfc-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);width:24px;}
+.pfc-name{font-size:14px;font-weight:600;}.pfc-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
+.pfc-right{display:flex;align-items:center;gap:12px;}
+.prb{display:flex;gap:2px;}.prb .b{width:14px;height:6px;border-radius:1px;background:var(--border);}.prb .b.r{background:var(--critical);}.prb .b.o{background:var(--high);}.prb .b.y{background:var(--elevated);}.prb .b.g{background:var(--moderate);}
+.prl{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1px;padding:4px 10px;border-radius:3px;}
+.pfc-arrow{font-size:14px;color:var(--text-dim);transition:transform .3s;}.pfc.expanded .pfc-arrow{transform:rotate(180deg);color:var(--accent-cyan);}
+.pfc-body{display:none;padding:0 18px 18px;border-top:1px solid var(--border);}
+.pfc.expanded .pfc-body{display:block;padding-top:16px;}
+.pdesc{font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px;}
+.psg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.psb{background:var(--bg-dark);border-radius:4px;padding:10px 12px;text-align:center;}
+.psb .n{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:2px;}
+.psb .lb{font-size:9px;color:var(--text-dim);letter-spacing:.5px;text-transform:uppercase;line-height:1.4;}
+.pcs{background:rgba(255,59,59,.03);border:1px solid rgba(255,59,59,.08);border-radius:4px;padding:12px 14px;margin-bottom:12px;}
+.pcs .tl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent-red);letter-spacing:1px;margin-bottom:6px;}
+.pcs .bd{font-size:11px;color:var(--text-secondary);line-height:1.6;}
+.phi{display:flex;gap:10px;margin-bottom:8px;padding:8px 10px;background:var(--bg-dark);border-radius:4px;}
+.phi .hn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent-cyan);font-weight:700;min-width:20px;}
+.phi .ht{font-size:11px;color:var(--text-secondary);line-height:1.5;}
+
+/* MACRO */
+.macro-view{padding:16px;}
+.mcat{margin-bottom:20px;}
+.mch{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.mch .dot{width:6px;height:6px;border-radius:50%;}
+.mg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.mc{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:12px;cursor:pointer;transition:all .2s;}
+.mc:hover{border-color:var(--accent-amber);transform:translateY(-1px);}.mc.selected{border-color:var(--accent-cyan);box-shadow:0 0 15px rgba(0,188,212,.08);}
+.mc .num{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-dim);margin-bottom:4px;}
+.mc .name{font-size:11px;font-weight:600;color:var(--text-primary);margin-bottom:6px;line-height:1.3;}
+.mc .status{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;}
+.mc .assets{font-size:9px;color:var(--text-dim);margin-top:6px;line-height:1.4;}
+.sb{color:var(--accent-green);}.sr{color:var(--accent-red);}.sy{color:var(--accent-amber);}.so{color:var(--high);}
+.ci{display:flex;gap:8px;margin-bottom:6px;font-size:11px;color:var(--text-secondary);line-height:1.4;}
+.ci-i{color:var(--accent-amber);font-weight:700;min-width:14px;}
+.cli{display:flex;gap:8px;margin-bottom:6px;font-size:11px;color:var(--text-secondary);line-height:1.4;}
+.cli-n{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent-cyan);font-weight:700;min-width:16px;}
+
+/* DIMON */
+.dimon-view{padding:16px;}
+.dh{background:linear-gradient(135deg,rgba(255,59,59,.06),rgba(255,59,59,.01));border:1px solid rgba(255,59,59,.12);border-radius:8px;padding:24px;margin-bottom:20px;text-align:center;}
+.dh-t{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:3px;margin-bottom:4px;}
+.dh-s{font-size:13px;color:var(--text-secondary);margin-bottom:16px;line-height:1.6;}
+.dsr{display:flex;justify-content:center;gap:30px;flex-wrap:wrap;}
+.dbs{text-align:center;}.dbs .n{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent-red);}.dbs .lb{font-size:9px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+.dsec{margin-bottom:20px;}
+.dsec-t{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.dsec-t .sn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent-red);background:rgba(255,59,59,.08);padding:3px 8px;border-radius:2px;}
+.dc{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .3s;}
+.dc:hover{border-color:rgba(255,59,59,.3);}
+.dc.expanded{border-color:var(--accent-cyan);}
+.dc-t{font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;}
+.dc-p{font-size:11px;color:var(--text-dim);line-height:1.5;}
+.dc-b{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text-secondary);line-height:1.7;}
+.dc.expanded .dc-b{display:block;}
+.dc .arr{color:var(--text-dim);transition:transform .3s;font-size:14px;}.dc.expanded .arr{transform:rotate(90deg);color:var(--accent-cyan);}
+.lc{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:10px;}
+.lc-n{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent-red);margin-bottom:6px;}
+.lc-t{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:8px;}
+.lc-b{font-size:12px;color:var(--text-secondary);line-height:1.7;}
+
+.view-container{display:none;}.view-container.active{display:block;}
+
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;height:28px;background:var(--bg-panel);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:20px;z-index:100;}
+.bottom-bar .item{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);display:flex;align-items:center;gap:6px;}
+.bottom-bar .cl{color:var(--accent-red);font-weight:700;letter-spacing:1px;}
+.bottom-scroll{flex:1;overflow:hidden;}
+.bottom-scroll-inner{display:flex;white-space:nowrap;animation:bScroll 40s linear infinite;}
+@keyframes bScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.bhl{display:flex;align-items:center;gap:10px;padding-right:40px;font-size:11px;}
+.bhl .tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 6px;border-radius:2px;}
+.tc{background:rgba(255,23,68,.15);color:var(--critical);}.th{background:rgba(255,109,0,.15);color:var(--high);}
+.bhl .txt{color:var(--text-secondary);font-size:11px;}
+</style>
+</head>
+<body>
+<div class="ticker-bar"><div class="ticker-scroll" id="ts"></div></div>
+<div class="header">
+  <div class="header-left">
+    <div class="logo"><span>WALLST</span><span>WATCH</span></div>
+    <div class="nav-tabs" id="navTabs">
+      <div class="nav-tab active" data-tab="bankmap">BANK MAP</div>
+      <div class="nav-tab" data-tab="credit">CREDIT SYSTEM</div>
+      <div class="nav-tab" data-tab="macro">MACRO DASH</div>
+      <div class="nav-tab" data-tab="dimon">DIMON OUTLOOK</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="bank-count">12 ACTIVE BANKS</div>
+    <div class="live-badge"><div class="live-dot"></div><span>LIVE — <span id="utc"></span> UTC</span></div>
+  </div>
+</div>
+<div class="main-grid">
+  <div class="left-panel"><div class="panel-section"><div class="panel-header"><div class="dot"></div> LATEST INTEL</div><div id="ni"></div></div><div class="panel-section"><div class="panel-header"><div class="dot" style="background:var(--accent-amber)"></div> COMMODITIES</div><div id="cm"></div></div><div class="panel-section"><div class="panel-header"><div class="dot" style="background:var(--accent-cyan)"></div> KEY RATES</div><div id="rt"></div></div></div>
+  <div class="center-panel">
+    <div class="center-header"><div class="center-title" id="cl"><span>◆</span> WALL STREET BANKING COMMAND CENTER</div><div style="display:flex;gap:8px;align-items:center;"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim)">THREAT LEVEL:</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent-red);font-weight:700;letter-spacing:1px">ELEVATED</span></div></div>
+    <div class="view-container active" id="view-bankmap"><div class="bank-grid" id="bg"></div></div>
+    <div class="view-container" id="view-credit"><div class="credit-view" id="cv"></div></div>
+    <div class="view-container" id="view-macro"><div class="macro-view" id="mv"></div></div>
+    <div class="view-container" id="view-dimon"><div class="dimon-view" id="dv"></div></div>
+  </div>
+  <div class="right-panel"><div class="detail-header"><div class="detail-title" id="rpTitle">INTEL DETAIL</div></div><div class="detail-content" id="dc"><div style="text-align:center;padding:40px 20px;color:var(--text-dim);font-size:12px;">Select an item to view<br>detailed intelligence</div></div></div>
+</div>
+<div class="bottom-bar"><div class="item"><span class="cl">◆ CRITICAL</span></div><div class="bottom-scroll"><div class="bottom-scroll-inner" id="bs"></div></div><div class="item" style="color:var(--accent-red)">◆ LIVE</div></div>
+
+<script>
+const T=[{s:'JPM',p:'283.15',c:'+3.12',pc:'+1.11%',d:'up'},{s:'GS',p:'562.40',c:'-4.87',pc:'-0.86%',d:'down'},{s:'MS',p:'118.23',c:'+1.45',pc:'+1.24%',d:'up'},{s:'BAC',p:'42.67',c:'+0.53',pc:'+1.26%',d:'up'},{s:'C',p:'71.85',c:'-0.32',pc:'-0.44%',d:'down'},{s:'WFC',p:'72.14',c:'+0.88',pc:'+1.23%',d:'up'},{s:'SPX',p:'6,341',c:'-28',pc:'-0.44%',d:'down'},{s:'DJI',p:'45,251',c:'+84',pc:'+0.19%',d:'up'},{s:'NDX',p:'20,770',c:'-178',pc:'-0.85%',d:'down'},{s:'VIX',p:'30.62',c:'-0.43',pc:'-1.38%',d:'down'},{s:'US10Y',p:'4.346%',c:'-9.4bp',pc:'-2.12%',d:'down'},{s:'WTI',p:'$103.38',c:'+3.75',pc:'+3.75%',d:'up'},{s:'GOLD',p:'$4,544',c:'+19.5',pc:'+0.43%',d:'up'},{s:'BTC',p:'$66,535',c:'+166',pc:'+0.25%',d:'up'},{s:'DXY',p:'103.84',c:'+0.22',pc:'+0.21%',d:'up'},{s:'BRENT',p:'$110.45',c:'+4.12',pc:'+3.87%',d:'up'}];
+const B=[
+{sym:'JPM',nm:'JPMorgan Chase & Co.',pr:'283.15',ch:'+1.11%',d:'up',mc:'$838B',c1:'15.3%',ni:'$104.5B',rk:'MODERATE',rc:'rm',rl:3,sg:[{t:'CET1 at 15.3% — fortress balance sheet',y:'ok'},{t:'$50B buyback for 2026 — significant price floor',y:'ok'},{t:'Record $57.5B net income FY25',y:'ok'},{t:'Iran conflict flagged as near-term credit risk',y:'caution'}],q:"No one can consistently predict crises. Build institutions that withstand a wide range of outcomes."},
+{sym:'GS',nm:'Goldman Sachs Group',pr:'562.40',ch:'-0.86%',d:'down',mc:'$271B',c1:'14.8%',ni:'$7.6B',rk:'ELEVATED',rc:'re',rl:5,sg:[{t:'S&P target 7,600 — most bullish among peers',y:'caution'},{t:'FICC trading revenue concentrated in volatility',y:'warn'},{t:'Apple Card transferred to JPM — exiting consumer',y:'ok'},{t:'Private credit faces mark-to-model risk',y:'warn'}],q:"Goldman targets 7,600 year-end with $309 EPS — but downside to 5,400 in severe oil shock."},
+{sym:'MS',nm:'Morgan Stanley',pr:'118.23',ch:'+1.24%',d:'up',mc:'$191B',c1:'15.1%',ni:'$8.2B',rk:'MODERATE',rc:'rm',rl:4,sg:[{t:'S&P target 7,800 — AI capex + rolling recovery thesis',y:'ok'},{t:'Wealth management AUM growing steadily',y:'ok'},{t:'Lowered META target to $775',y:'caution'}],q:"Morgan Stanley expects AI capex and a 'rolling recovery' to drive gains through 2026."},
+{sym:'BAC',nm:'Bank of America',pr:'42.67',ch:'+1.26%',d:'up',mc:'$337B',c1:'11.9%',ni:'$57.2B',rk:'ELEVATED',rc:'re',rl:5,sg:[{t:'S&P target 7,100 — most cautious major bank',y:'warn'},{t:'Hartnett: "buyable washout" below 6,600',y:'caution'},{t:'CET1 11.9% — lower buffer than JPM',y:'warn'},{t:'Consumer franchise provides deposit stability',y:'ok'}],q:"BofA warns of AI 'air pocket' — not a bubble — as market fuel diminishes."},
+{sym:'C',nm:'Citigroup Inc.',pr:'71.85',ch:'-0.44%',d:'down',mc:'$139B',c1:'13.4%',ni:'$52.1B',rk:'HIGH',rc:'rh',rl:7,sg:[{t:'Transformation plan — restructuring costs drag',y:'warn'},{t:'EM exposure amplified by dollar + Iran conflict',y:'warn'},{t:'Consent orders still active',y:'warn'},{t:'Treasury services franchise remains strong',y:'ok'}],q:"Citi's EM exposure makes it the most geopolitically sensitive of the Big Six."},
+{sym:'WFC',nm:'Wells Fargo & Co.',pr:'72.14',ch:'+1.23%',d:'up',mc:'$210B',c1:'11.2%',ni:'$52.8B',rk:'ELEVATED',rc:'re',rl:6,sg:[{t:'Asset cap still constrains growth',y:'warn'},{t:'CRE concentration elevated — office exposure concern',y:'warn'},{t:'NII guidance lower on rate environment',y:'caution'},{t:'Mortgage market share growing',y:'ok'}],q:"Asset cap removal would unlock significant earnings power."},
+{sym:'DB',nm:'Deutsche Bank AG',pr:'18.42',ch:'-1.34%',d:'down',mc:'$45B',c1:'13.8%',ni:'€13.6B',rk:'HIGH',rc:'rh',rl:7,sg:[{t:'European energy spillover from Iran',y:'warn'},{t:'S&P target 8,000 — biggest bull on Street',y:'caution'},{t:'Derivatives exposure outsized vs equity',y:'warn'}],q:"Deutsche maintains most bullish S&P target at 8,000."},
+{sym:'UBS',nm:'UBS Group AG',pr:'32.56',ch:'+0.67%',d:'up',mc:'$102B',c1:'14.5%',ni:'CHF 7.1B',rk:'ELEVATED',rc:'re',rl:5,sg:[{t:'CS integration ongoing — op risk elevated',y:'caution'},{t:'Wealth AUM at record — HNWI flows strong',y:'ok'},{t:'Swiss regulators may require higher buffers',y:'warn'}],q:"Post-CS, UBS is the dominant European wealth franchise."},
+{sym:'BCS',nm:'Barclays PLC',pr:'13.87',ch:'-0.52%',d:'down',mc:'$41B',c1:'13.6%',ni:'£12.4B',rk:'HIGH',rc:'rh',rl:6,sg:[{t:'UK gilt sensitivity — 2022 echo risk',y:'warn'},{t:'IB revenue recovering but volatile',y:'caution'},{t:'Consumer credit delinquency uptick',y:'warn'}],q:"The UK gilt crisis showed how fast sovereign concerns cascade."},
+{sym:'HSBC',nm:'HSBC Holdings PLC',pr:'48.92',ch:'+0.34%',d:'up',mc:'$168B',c1:'14.7%',ni:'$36.8B',rk:'ELEVATED',rc:'re',rl:5,sg:[{t:'S&P target 7,500 — aligned with JPM',y:'ok'},{t:'Asia-Pacific exposed to China slowdown',y:'warn'},{t:'Dollar strength hits non-USD revenue',y:'caution'}],q:"Dual China/dollar exposure creates complex 2026 risk profile."},
+{sym:'BNP',nm:'BNP Paribas SA',pr:'72.30',ch:'-0.88%',d:'down',mc:'$82B',c1:'13.2%',ni:'€24.1B',rk:'HIGH',rc:'rh',rl:6,sg:[{t:'Eurozone energy crisis 2.0 risk',y:'warn'},{t:'French sovereign spread widening',y:'warn'},{t:'CIB positioned for FICC vol',y:'ok'}],q:"European banks face secondary oil shock through industrial borrowers."},
+{sym:'SCHW',nm:'Charles Schwab Corp.',pr:'84.50',ch:'+2.12%',d:'up',mc:'$156B',c1:'28.4%',ni:'$9.8B',rk:'MODERATE',rc:'rm',rl:3,sg:[{t:'Client assets record $10.1T',y:'ok'},{t:'Deposit migration stabilized',y:'ok'},{t:'Higher-for-longer benefits NII',y:'ok'}],q:"Massive client base provides structural advantage in volatility."},
+];
+
+const P=[
+{n:'01',nm:'Bank Lending',sub:'Traditional Credit Engine',rk:7,rl:'HIGH',desc:'Banks are the traditional engine of credit creation. SLOOS is the key indicator — >50% tightening in Q3 2022. Small business lending is the most sensitive leading indicator. 44% of owners reported harder conditions in 2023.',stats:[{l:'US Bank Loans',v:'$12T+'},{l:'Tightening Lead',v:'6-12mo'},{l:'C&I Peak',v:'50%+'}],sigs:['SLOOS Tightening','C&I Growth YoY','Mortgage Origination','NFIB Credit'],cs:{t:'2007-08 · MORTGAGE CREDIT REVERSAL',b:'Mortgage originations surged to $3T+ annually 2003-06, then collapsed 40% by 2007. The signal was red a full year before Lehman.'},hw:['Read SLOOS quarterly. >30-40% tightening = reduce risk exposure.','Track H.8 weekly. Negative YoY loan growth preceded every recession.','JPMorgan earnings: rising loan loss reserves = internal models flashing caution.','Regional bank earnings show stress before big banks.']},
+{n:'02',nm:'Corporate Bonds',sub:'Capital Markets Barometer',rk:8,rl:'VERY HIGH',desc:'US corporate bond market >$10T. Credit spreads are the key metric. HY blew to 1,900bps in Dec 2008 and ~1,100bps in March 2020 before Fed intervention. IG/HY divergence tells you where in the cycle you are.',stats:[{l:'Bond Market',v:'$10T+'},{l:'Peak HY (2008)',v:'1,900bps'},{l:'Normal IG',v:'80-120bps'}],sigs:['IG Spreads','HY Spreads','Issuance Volume','CDX Index'],cs:{t:'MARCH 2020 · COVID CREDIT FREEZE',b:'HY spiked from ~340bps to ~1,100bps in two weeks. New issuance halted. Fed unlimited bond buying on March 23 immediately reversed it.'},hw:['HY OAS daily: <350=benign, 350-600=caution, >600=stress, >900=crisis.','CDX index moves precede retail repricing by days-weeks.','Track refinancing wall — large maturities at wide spreads = forced default risk.','IG+HY both widening = systemic fear has entered the market.']},
+{n:'03',nm:'Private Credit',sub:'The Shadow Frontier',rk:7,rl:'HIGH',desc:'~$1.7T US leveraged loans + $1.5T+ global private credit. ~80% covenant-lite. 2022 rate shock pushed floating coupons from 4-5% to 9-11%. Defaults rose from ~1% to >3.5%. Opacity is the systemic vulnerability.',stats:[{l:'Combined AUM',v:'$3.2T+'},{l:'Post-Hike Coupon',v:'9-11%'},{l:'Cov-Lite Share',v:'~80%'}],sigs:['Default Rate','CLO Equity','PC AUM Growth','Debt/EBITDA','PIK Toggle'],cs:{t:'2022-24 · PRIVATE CREDIT HIDDEN STRESS',b:'Fed hiked 525bps. Borrower interest roughly doubled. Default rates to 3.5%+. True rates unknown due to opacity — a vulnerability regulators are only beginning to address.'},hw:['Default rate >3% precedes broader tightening. >5-6% = full contraction.','PIK toggles = real-time stress before reported defaults.','BDC market prices as daily proxy for private credit health.','Assess PE-backed supplier concentration — indirect leveraged exposure.']},
+{n:'04',nm:'Shadow Banking',sub:'Hidden Architecture',rk:9,rl:'CRITICAL',desc:'Global NBFI sector ~$218T — 2x banking sector, without safety nets. HF Treasury basis trade ~$600B-$1T. Open-ended bond funds with daily liquidity against illiquid assets. The 2008 MMF run: $300B in 72 hours.',stats:[{l:'NBFI Sector',v:'$218T'},{l:'MMF Outflows (08)',v:'$300B / 3d'},{l:'HF Basis Trade',v:'~$1T'}],sigs:['MMF Flows','HF Leverage','FRA-OIS','Securitisation','CMBS Spreads'],cs:{t:'SEPT 2008 · THE MMF RUN',b:'Reserve Primary Fund broke the buck. $300B withdrawn from MMFs in 72 hours. Commercial paper market froze. GE couldn\'t roll its paper. Shadow banking delivered a heart attack to the real economy.'},hw:['$100B+ MMF shift in one week = four-alarm signal.','FRA-OIS: normal 5-10bps, >50bps = interbank fear, 364bps in 2008.','Stress-test against 72-hour market freeze.','If you can\'t explain how a product generates returns, it\'s shadow banking risk.']},
+{n:'05',nm:'Funding Markets',sub:'Where Crises First Appear',rk:9,rl:'CRITICAL',desc:'US repo market: $4-5T/day. Sept 2019 repo spike to 10% from 2.25% — a dress rehearsal for COVID. Funding stress escalates in hours, not months. Speed of response is existential.',stats:[{l:'Daily Repo Vol',v:'$4-5T'},{l:'2019 Spike',v:'10% vs 2.25%'},{l:'Escalation',v:'Days'}],sigs:['SOFR vs IORB','CP Spreads','Reserve Balances','FRA-OIS'],cs:{t:'SEPT 2019 · REPO MARKET SHOCK',b:'Overnight repo hit 10% due to tax payments + Treasury settlement + reserve scarcity interacting. The Fed hadn\'t anticipated it. Dress rehearsal for COVID crisis six months later.'},hw:['SOFR >10-15bps above IORB = reserve scarcity signal.','Declining CP + widening spreads = early funding stress.','Map your 30/60/90-day maturity profile.','Funding disruption = IMMEDIATE action: draw credit lines, build cash, cut counterparty exposure.']},
+{n:'06',nm:'Market Liquidity',sub:'Invisible Infrastructure',rk:8,rl:'VERY HIGH',desc:'Liquidity is like oxygen — invisible until gone. Post-2010 rules cut dealer inventories. March 2020: Treasury bid-ask 20-30x normal. Liquidity spirals develop in minutes once selling overwhelms dealer capacity.',stats:[{l:'2020 Widening',v:'20-30x'},{l:'MOVE Stress',v:'>130'},{l:'Spiral Time',v:'Minutes'}],sigs:['MOVE Index','VIX Structure','Futures Depth','Dealer Inventory','Bid-Ask Spreads'],cs:{t:'1987 & 2020 · LIQUIDITY SPIRALS',b:'Black Monday: Dow fell 22.6% as portfolio insurance overwhelmed the market. March 2020: same dynamic in Treasuries. Both confirm liquidity vanishes when you need it most.'},hw:['MOVE >130-140 = stressed. >150 = serious impairment.','Realized > implied vol = market caught off guard.','No position >5-10% of ADV if you may need to exit.','Apply 5-15% liquidity haircut under stress — Dimon\'s internal methodology.']},
+{n:'07',nm:'Dollar Liquidity',sub:'The Dollar\'s Global Role',rk:8,rl:'VERY HIGH',desc:'88% of global FX is dollar. $13T offshore dollar debt. Fed tightening = global tightening. 2022: DXY +15%, Sri Lanka defaulted, Pakistan needed IMF. Dollar carry trades unwind violently.',stats:[{l:'Offshore Debt',v:'$13T'},{l:'FX Dollar Share',v:'88%'},{l:'2022 DXY Rise',v:'+15%'}],sigs:['DXY','Cross-Curr Basis','Swap Lines','EM Spreads','FX Reserves'],cs:{t:'2008 & 1997-98 · DOLLAR CRISES',b:'Asian crisis: Thailand GDP -10.5%. In 2008, European banks\' dollar dependence on US MMFs exposed. Fed extended $600B+ in emergency swap lines — becoming world\'s lender of last resort.'},hw:['DXY up 8-10% in 12 months = expect EM stress.','Cross-currency basis significantly negative = systemic dollar stress.','Map your dollar revenue vs cost exposure.','Fed swap line activation = confirmed systemic stress.']},
+{n:'08',nm:'Household Credit',sub:'The Consumer Engine',rk:7,rl:'HIGH',desc:'Consumer spending = ~70% of GDP. Household debt $17.8T. CC delinquency at 3.1% — decade high — with unemployment <4%. This divergence = meaningful consumer stress already present.',stats:[{l:'Household Debt',v:'$17.8T'},{l:'CC Delinquency',v:'3.1%'},{l:'2007 DSR',v:'13%+'}],sigs:['CC Delinquency','Mortgage Delinq','DSR','Auto Charge-offs','Confidence'],cs:{t:'2005-09 · HOUSEHOLD DEBT SUPERCYCLE',b:'Mortgage debt doubled 2000-07 ($5.3T→$10.5T). 4.9M foreclosures 2009-12. Fed estimated $400-500B annual spending reduction — demand destruction no policy could quickly reverse.'},hw:['NY Fed quarterly credit report: watch transition rates accelerating across categories.','JPM Chase Institute data = real-time consumer proxy weeks ahead of official data.','Segment by income quartile — aggregate data is misleading.','Model 10% discretionary spending decline — build reserves if severe.']},
+{n:'09',nm:'Government Debt',sub:'Foundation of Everything',rk:9,rl:'FOUNDATIONAL',desc:'$27T+ Treasury market = global bedrock. Interest cost >$1T. Deficit 6-7% GDP — wartime levels, now structural. Debt/GDP to 130% by 2034. A 1% yield rise = $1.5-2T market value loss.',stats:[{l:'Treasury Market',v:'$27T+'},{l:'Interest Cost',v:'$1T+'},{l:'Debt/GDP 2034',v:'130%'}],sigs:['10Y Term Premium','30Y vs GDP','CBO Projections','Foreign Holdings','Sovereign CDS'],cs:{t:'SEPT-OCT 2022 · UK GILT CRISIS',b:'£45B unfunded tax cuts → gilt yields +150bps in 2 days. BoE emergency purchases to save pension funds. 13 trading days to government reversal. A preview of what happens when bond markets reject fiscal policy.'},hw:['NY Fed ACM term premium model — sharp rises = investors demanding fiscal risk compensation.','30Y yield > nominal GDP growth = mathematically unsustainable debt path.','Auction metrics: bid-to-cover <2.3x, large tails = deteriorating confidence.','Stress-test against 200bps rate shock — probability higher than consensus.']},
+];
+
+const MC=[
+{title:'MACRO REGIME',color:'var(--accent-red)',inds:[
+{n:1,nm:'Yield Curve',st:'CAUTION',sc:'so',as:'US2Y, US5Y, US10Y, US30Y',co:['2Y above 10Y = inverted — MAJOR recession warning','2Y falling + 10Y rising = steepening — recovery','All rising = broad rate pressure'],cl:['Is 2Y > 10Y? Sustained >3mo is critical.','Which end moving faster?','Steepening (risk-on) or flattening (risk-off)?','Has 10Y crossed 4%, 4.5%, or 5%?'],nt:'Every US recession since 1955 was preceded by inversion. Mechanism is partly causal: compressed NIM reduces lending.'},
+{n:2,nm:'Inflation Expectations',st:'BEARISH',sc:'sr',as:'US10Y, Gold, Silver, Copper, Oil',co:['Gold + yields up = stagflation risk','Oil + gold + yields up = full inflation','Commodities + yields down = deflationary'],cl:['Yields rising with commodities?','Gold leading?','Real yields direction?','Oil aligned with other indicators?'],nt:'Gold rising with yields = stagflation where Fed cannot cut. Most dangerous macro combination.'},
+{n:3,nm:'Global Growth',st:'MIXED',sc:'sy',as:'SPX, Copper, Oil, EEM, URTH',co:['SPX up + EEM down = US only — caution','Copper + oil + EEM down = global recession','URTH + EEM rising = true risk-on'],cl:['Equities AND commodities green?','EEM keeping pace with SPX?','Is copper rising?','US vs global divergence?'],nt:'Copper + EEM rising eliminates liquidity-only explanations. SPX/EEM divergence = narrowing bull market.'},
+{n:5,nm:'Safe Haven Demand',st:'BULLISH',sc:'sb',as:'Gold, TLT, UUP, JPY, CHF',co:['Gold + TLT + DXY up = maximum safety flight','Gold up + TLT down = inflation hedge','Only DXY up = dollar shortage'],cl:['Multiple safe havens confirming?','Gold for inflation or safety?','Bonds and gold aligned?','JPY strengthening?'],nt:'When all safe havens move together = genuine risk-off. Single-asset moves often idiosyncratic.'},
+]},
+{title:'GEOPOLITICAL & ENERGY',color:'var(--accent-amber)',inds:[
+{n:7,nm:'Energy Complex',st:'BEARISH',sc:'sr',as:'WTI, Brent, XLE, Nat Gas',co:['WTI + Brent >$100 = acute supply concern','Energy up + equities down = stagflation','XLE outperforming = sector rotation'],cl:['WTI and Brent aligned?','Nat gas following oil?','XLE vs SPX?','Contango or backwardation?'],nt:'Iran conflict Day 31: WTI $103+, Brent $110+. Sustained supply risk now priced as structural.'},
+{n:14,nm:'Geopolitical Risk',st:'BEARISH',sc:'sr',as:'Gold, Oil, VIX, ITA, LMT',co:['Gold + oil + VIX spiking = max geo stress','Defense up + market down = escalation priced','Oil spike without gold = supply only'],cl:['VIX above 30? Yes.','Defense outperforming?','Oil above $100?','Safe havens confirming?'],nt:'Iran conflict Day 31 = most significant energy geopolitical shock since Ukraine 2022.'},
+{n:15,nm:'Volatility Regime',st:'BEARISH',sc:'sr',as:'VIX, VVIX, MOVE, Put/Call',co:['VIX >30 + MOVE >130 = cross-asset fear','VIX term structure inverted = near-term panic','Extreme put/call = capitulation potential'],cl:['VIX above 30? Yes — one-year high.','Term structure inverted?','MOVE reading?','Equity vs bond vol divergence?'],nt:'VIX >30 sustained = correction-to-bear territory. Currently at one-year highs.'},
+{n:19,nm:'NATO / Military',st:'BULLISH',sc:'sb',as:'ITA, LMT, NOC, RTX, BAESY',co:['All defense up = structural spending cycle','US only = check budget context','BAESY up = European expansion confirmed'],cl:['US + EU defense aligned?','Outperforming market?','News spike or sustained?','Duration = investment response.'],nt:'Post-2022 European defence expansion unprecedented. Multi-decade procurement with locked-in revenue.'},
+]},
+{title:'CONSUMER & CREDIT',color:'var(--accent-cyan)',inds:[
+{n:11,nm:'Recession Probability',st:'BEARISH',sc:'sr',as:'US2Y, US10Y, HYG, SPX',co:['Inverted curve + HY widening = highest conviction','SPX + credit declining = confirmation','Re-steepening + HY tightening = averted'],cl:['NY Fed recession model?','Credit confirming equity weakness?','Curve still inverted?','Leading indicators declining?'],nt:'Curve inversion duration + credit widening = highest conviction recession signal in financial markets.'},
+{n:12,nm:'Credit Stress',st:'BEARISH',sc:'sr',as:'HYG, LQD, JNK, CDX',co:['HYG + JNK declining = broad stress','IG + HY widening = systemic fear','Only HY = confined to weak'],cl:['IG and HY same direction?','CDX NA HY reading?','ETF outflows accelerating?','New issuance open?'],nt:'IG and HY widening simultaneously = transition from isolated weakness to systemic credit fear.'},
+{n:23,nm:'Consumer (Lower)',st:'BEARISH',sc:'sr',as:'DG, DLTR, WMT, DFS',co:['Dollar stores + delinquency up = stress','WMT gaining share = trade-down confirmed','DFS declining = subprime deteriorating'],cl:['Dollar store revenues accelerating?','Subprime delinquency rising?','SNAP enrollments?','Savings rate declining?'],nt:'Sub-prime CC delinquency approaching 2010 levels for lower-income. Aggregate data misleading.'},
+{n:27,nm:'CRE Stress',st:'BEARISH',sc:'sr',as:'VNQ, O, SPG, Regionals',co:['VNQ + regionals down = CRE crunch','Office vacancy + refi wall = forced sales','Industrial diverging from office = selective'],cl:['Office vacancy nationally?','Regional bank CRE provisions?','Refinancing wall timing?','Cap rate adjustment?'],nt:'CRE = most concentrated risk in regional banking. Office vacancy above 20%.'},
+]},
+{title:'TECH & STRUCTURAL',color:'#b388ff',inds:[
+{n:20,nm:'AI Infrastructure',st:'MIXED',sc:'sy',as:'NVDA, AMD, AVGO, MSFT, GOOGL',co:['All AI up = capex cycle intact','NVDA down + hyperscalers up = rotation','All down = air pocket forming'],cl:['NVDA leading or lagging?','Hyperscaler capex holding?','Data center power narrative?','Capex pullback signs?'],nt:'~$370B combined 2025 capex from big tech. Question: does it translate to sustained revenue?'},
+{n:21,nm:'Semiconductors',st:'BEARISH',sc:'sr',as:'NVDA, AMD, TSM, ASML, SMH',co:['SMH down broadly = cyclical downturn','NVDA alone = AI-specific','TSM + ASML = supply chain concern'],cl:['SOX in correction?','Inventories building?','NVDA off >21% from ATH? Yes.','Fab utilization declining?'],nt:'NVDA at mid-July levels, off >21% from all-time high. Alphabet compute-efficiency research adding pressure.'},
+{n:24,nm:'Housing Market',st:'CAUTION',sc:'so',as:'XHB, ITB, LEN, DHI',co:['Builders up + rates falling = recovery','Rates >7% + flat = affordability crisis','New rising, existing stagnant = lock-in'],cl:['30Y mortgage? 7.14%.','Housing starts trend?','Existing inventory?','Builder sentiment?'],nt:'30Y at 7.14% suppresses transactions. Rate lock-in keeps existing inventory artificially low.'},
+{n:37,nm:'Commodity Super Cycle',st:'MIXED',sc:'sy',as:'FCX, VALE, BHP, Gold, DBC',co:['FCX + VALE + BHP + DBC up = confirmed','DBC up but miners flat = skeptical','All down = cycle turning'],cl:['Miners moving with prices?','FCX leading?','China demand consistent?','Energy transition or broad?'],nt:'Energy transition requires copper for EVs/power — structural demand outlasting cyclical downturns.'},
+]},
+];
+
+const DP=[
+{t:'Capitalism as a Dynamic System',p:'Most powerful prosperity system — but cyclical and prone to instability.',b:'Dimon views capitalism as the most powerful system for generating prosperity, innovation, and opportunity, while recognising it is inherently dynamic, cyclical, and prone to instability when institutions are weak or incentives misaligned.'},
+{t:'Institutions as Load-Bearing Pillars',p:'The Fed, Treasury, FDIC — structural necessities, not annoyances.',b:'These are load-bearing pillars of a financial system that, if they fail, can bring down the entire structure. Systemic stability is a public good on which private enterprise depends.'},
+{t:'Stability Precedes Growth',p:'Financial stability is not a constraint — it is a prerequisite.',b:'Economies cannot invest, innovate, or expand without stable credit markets. The downside of instability is far more damaging than the upside of any bull market.'},
+{t:'Long-Term Over Short-Termism',p:'Chronic underinvestment deteriorates competitiveness.',b:'Dimon connects underinvestment in infrastructure, education, and capital formation directly to deteriorating competitiveness — and argues those sacrificing the future eventually pay a steep price.'},
+];
+const DF=[
+{t:'Systems Thinking',p:'Never analyse a variable in isolation.',b:'Dimon asks how every variable interacts with everything else simultaneously. Changing one creates non-linear ripple effects throughout the system.'},
+{t:'Second-Order Effects',p:'Cascading consequences cause the most damage.',b:'When rates rise, the first-order effect is obvious. CLO stress, regional bank losses, consumer contraction, CRE repricing — these require systems thinking.'},
+{t:'Scenario Planning',p:'Consider a range of futures, not a single forecast.',b:'Dimon positions the institution for each scenario — from benign soft landings to severe recessions. His warnings are scenario alerts, not predictions.'},
+{t:'Credit Cycle Awareness',p:'Narrow spreads + high leverage = accumulating risk.',b:'Dimon watches the credit cycle as a predictor of where conditions are heading, not just where they are now.'},
+{t:'Resilience Over Prediction',p:'Build to withstand, don\'t bet on being right.',b:'JPMorgan survives crises not because Dimon predicted them, but because he prepared for them. This is the deepest insight.'},
+];
+const DL=[
+{n:'I',t:'Think in Systems, Not Data Points',b:'Economic outcomes emerge from interactions of many forces. Analysts tracking variables in isolation will consistently be surprised.'},
+{n:'II',t:'Resilience Beats Prediction',b:'No one can consistently predict crises. Build institutions and portfolios that withstand a wide range of outcomes.'},
+{n:'III',t:'Respect the Credit Cycle',b:'Credit expansions accumulate vulnerabilities. When credit is easy and leverage high, prepare for the turn.'},
+{n:'IV',t:'Geopolitics Is Economics',b:'Political developments can overwhelm fundamentals. Geopolitical risk is a first-order input, not an afterthought.'},
+{n:'V',t:'Long-Termism Is a Competitive Advantage',b:'Investing in resilience and human capital consistently outperforms over full cycles, even if it lags at the peak.'},
+];
+
+const NW=[
+{tm:'2m ago',hl:'<strong>Fed Chair Powell</strong> at Harvard — rates "in good place," won\'t change for oil'},
+{tm:'16m ago',hl:'<strong>JPMorgan</strong> +3% amid bond rebound; financials lead Dow'},
+{tm:'1h ago',hl:'<strong>Iran:</strong> Houthi attacks threaten Red Sea; WTI above $103'},
+{tm:'2h ago',hl:'<strong>Aluminum</strong> 4-year high after strikes on ME producers'},
+{tm:'3h ago',hl:'<strong>Trump</strong> tells FT "take the oil" — Kharg Island threat'},
+{tm:'5h ago',hl:'<strong>Goldman:</strong> hedge funds sold financials most this week'},
+{tm:'8h ago',hl:'<strong>Dow in correction</strong> — 10% off November highs'},
+];
+const CM=[{n:'WTI Crude',p:'$103.38',c:'+3.75%',d:'up'},{n:'Brent',p:'$110.45',c:'+3.87%',d:'up'},{n:'Nat Gas',p:'$4.12',c:'+1.8%',d:'up'},{n:'Gold',p:'$4,544',c:'+0.43%',d:'up'},{n:'Silver',p:'$70.44',c:'+0.92%',d:'up'},{n:'Copper',p:'$4.82',c:'-0.6%',d:'down'},{n:'Aluminum',p:'$3,420',c:'+4.70%',d:'up'}];
+const RT=[{n:'Fed Funds',p:'5.25-5.50%',c:'HOLD',d:''},{n:'US 2Y',p:'4.12%',c:'-8bp',d:'down'},{n:'US 10Y',p:'4.346%',c:'-9.4bp',d:'down'},{n:'US 30Y',p:'4.62%',c:'-7bp',d:'down'},{n:'30Y Mort',p:'7.14%',c:'+2bp',d:'up'}];
+const BH=[{tg:'CRITICAL',tc:'tc',tx:'Oil above $100 — Iran conflict Day 31'},{tg:'CRITICAL',tc:'tc',tx:'VIX above 30 — one-year high'},{tg:'HIGH',tc:'th',tx:'Dow in correction — 10% off highs'},{tg:'CRITICAL',tc:'tc',tx:'Fed hike expectations collapse after Powell'},{tg:'HIGH',tc:'th',tx:'JPM cuts S&P target to 7,200'},{tg:'CRITICAL',tc:'tc',tx:'Aluminum 4-year high after strikes'},{tg:'HIGH',tc:'th',tx:'HY spreads approaching 500bps caution zone'}];
+
+function init(){
+  let td=[...T,...T];document.getElementById('ts').innerHTML=td.map(t=>`<div class="ticker-item"><span class="symbol">${t.s}</span><span class="price">${t.p}</span><span class="change ${t.d}">${t.d==='up'?'▲':'▼'} ${t.c} (${t.pc})</span></div>`).join('');
+  document.getElementById('ni').innerHTML=NW.map(n=>`<div class="news-item"><div class="time">${n.tm}</div><div class="headline">${n.hl}</div></div>`).join('');
+  document.getElementById('cm').innerHTML=CM.map(c=>`<div class="commodity-row"><span class="name">${c.n}</span><span class="price">${c.p}</span><span class="chg ${c.d}">${c.c} ${c.d==='up'?'▲':'▼'}</span></div>`).join('');
+  document.getElementById('rt').innerHTML=RT.map(r=>`<div class="commodity-row"><span class="name">${r.n}</span><span class="price">${r.p}</span><span class="chg ${r.d}">${r.c}</span></div>`).join('');
+  let bh=[...BH,...BH];document.getElementById('bs').innerHTML=bh.map(h=>`<div class="bhl"><span class="tag ${h.tc}">${h.tg}</span><span class="txt">${h.tx}</span></div>`).join('');
+  renderBankMap();renderCredit();renderMacro();renderDimon();
+  document.querySelectorAll('.nav-tab').forEach(tab=>{tab.addEventListener('click',()=>{
+    const t=tab.dataset.tab;
+    document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));tab.classList.add('active');
+    document.querySelectorAll('.view-container').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+t).classList.add('active');
+    const labels={bankmap:'WALL STREET BANKING COMMAND CENTER',credit:'DIMON CREDIT SYSTEM — NINE PILLARS',macro:'MACRO REGIME DASHBOARD',dimon:'DIMON OUTLOOK — MENTAL MODELS & FRAMEWORKS'};
+    document.getElementById('cl').innerHTML=`<span>◆</span> ${labels[t]}`;
+    const titles={bankmap:'INTEL DETAIL',credit:'PILLAR DETAIL',macro:'INDICATOR DETAIL',dimon:'FRAMEWORK DETAIL'};
+    document.getElementById('rpTitle').textContent=titles[t];
+    document.getElementById('dc').innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-dim);font-size:12px;">Select an item to view<br>detailed intelligence</div>';
+  });});
+  setInterval(()=>{document.getElementById('utc').textContent=new Date().toUTCString().split(' ')[4];},1000);
+  document.getElementById('utc').textContent=new Date().toUTCString().split(' ')[4];
+  setTimeout(()=>selBank(0),400);
+}
+
+function renderBankMap(){
+  document.getElementById('bg').innerHTML=B.map((b,i)=>`<div class="bank-card" id="bk-${i}" onclick="selBank(${i})">
+    <div class="bank-card-header"><div class="bank-symbol">${b.sym}</div><div class="brb ${b.rc}">${b.rk}</div></div>
+    <div class="bank-name">${b.nm}</div>
+    <div class="bank-metrics"><div class="bm"><span class="l">Price</span><span class="v n">$${b.pr}</span></div><div class="bm"><span class="l">Change</span><span class="v ${b.d}">${b.ch}</span></div><div class="bm"><span class="l">Mkt Cap</span><span class="v n">${b.mc}</span></div><div class="bm"><span class="l">CET1</span><span class="v n">${b.c1}</span></div></div>
+    <div class="bank-bar"><div class="bank-bar-fill" style="width:${b.rl*10}%;background:${b.rl>=8?'var(--accent-red)':b.rl>=6?'var(--accent-amber)':'var(--accent-green)'}"></div></div>
+  </div>`).join('');
+}
+
+function renderCredit(){
+  document.getElementById('cv').innerHTML=`<div style="margin-bottom:16px;"><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;">DIMON'S NINE PILLARS OF CREDIT</div><div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Click any pillar to expand full analysis with case studies and actionable signals</div></div>`+
+  P.map((p,i)=>{
+    const bl=Array.from({length:10},(_,j)=>`<div class="b ${j<p.rk?(p.rk>=9?'r':p.rk>=7?'o':'g'):''}"></div>`).join('');
+    const rc=p.rk>=9?'var(--critical)':p.rk>=8?'var(--high)':'var(--elevated)';
+    return `<div class="pfc" id="pc-${i}"><div class="pfc-top" onclick="togPillar(${i})"><div class="pfc-left"><div class="pfc-num">${p.n}</div><div><div class="pfc-name">${p.nm}</div><div class="pfc-sub">${p.sub}</div></div></div><div class="pfc-right"><div class="prb">${bl}</div><div class="prl" style="background:${rc}15;color:${rc};border:1px solid ${rc}40">${p.rl}</div><div class="pfc-arrow">▼</div></div></div>
+    <div class="pfc-body"><div class="pdesc">${p.desc}</div><div class="psg">${p.stats.map(s=>`<div class="psb"><div class="n">${s.v}</div><div class="lb">${s.l}</div></div>`).join('')}</div>
+    <div class="pcs"><div class="tl">◆ CASE STUDY · ${p.cs.t}</div><div class="bd">${p.cs.b}</div></div>
+    <div style="margin-top:12px;"><div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:8px;">★ HOW TO APPLY THIS PILLAR</div>${p.hw.map((h,j)=>`<div class="phi"><div class="hn">0${j+1}</div><div class="ht">${h}</div></div>`).join('')}</div>
+    <div style="margin-top:12px;"><div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--accent-blue);margin-bottom:8px;">WATCH SIGNALS</div><div class="signal-tags">${p.sigs.map(s=>`<span class="stag">${s}</span>`).join('')}</div></div></div></div>`;
+  }).join('');
+}
+
+function renderMacro(){
+  document.getElementById('mv').innerHTML=MC.map(cat=>`<div class="mcat"><div class="mch" style="color:${cat.color}"><div class="dot" style="background:${cat.color}"></div>${cat.title}</div><div class="mg">${cat.inds.map(m=>`<div class="mc" id="mc-${m.n}" onclick="selMacro(${m.n})"><div class="num">#${m.n}</div><div class="name">${m.nm}</div><div class="status ${m.sc}">◆ ${m.st}</div><div class="assets">${m.as}</div></div>`).join('')}</div></div>`).join('');
+}
+
+function renderDimon(){
+  document.getElementById('dv').innerHTML=`
+  <div class="dh"><div class="dh-t">HOW JAMIE DIMON READS THE WORLD</div><div class="dh-s">Mental Models, Economic Frameworks, and the Strategic Worldview<br>of the Most Influential Banker on the Planet</div><div class="dsr"><div class="dbs"><div class="n">$3.9T</div><div class="lb">JPM Total Assets</div></div><div class="dbs"><div class="n">9</div><div class="lb">Credit Pillars</div></div><div class="dbs"><div class="n">20+</div><div class="lb">Years as CEO</div></div><div class="dbs"><div class="n">∞</div><div class="lb">Scenarios Considered</div></div></div></div>
+  <div class="dsec"><div class="dsec-t"><span class="sn">02</span>CORE ECONOMIC PHILOSOPHY</div>${DP.map((p,i)=>`<div class="dc" id="dp-${i}" onclick="togDC('dp-${i}')"><div class="dc-t">${p.t}<span class="arr">►</span></div><div class="dc-p">${p.p}</div><div class="dc-b">${p.b}</div></div>`).join('')}</div>
+  <div class="dsec"><div class="dsec-t"><span class="sn">03</span>KEY MENTAL MODELS & FRAMEWORKS</div>${DF.map((f,i)=>`<div class="dc" id="df-${i}" onclick="togDC('df-${i}')"><div class="dc-t">${f.t}<span class="arr">►</span></div><div class="dc-p">${f.p}</div><div class="dc-b">${f.b}</div></div>`).join('')}</div>
+  <div class="dsec"><div class="dsec-t"><span class="sn">09</span>FIVE LESSONS FROM THE DIMON APPROACH</div>${DL.map(l=>`<div class="lc"><div class="lc-n">LESSON ${l.n}</div><div class="lc-t">${l.t}</div><div class="lc-b">${l.b}</div></div>`).join('')}</div>
+  <div class="dq" style="margin:0 0 20px"><div class="t">"Jamie Dimon's analytical framework is, at its core, a commitment to taking the world seriously — in its complexity, its interconnectedness, its unpredictability, and its capacity for both tremendous prosperity and catastrophic failure."</div><div class="a">— SYNTHESIS</div></div>`;
+}
+
+function selBank(i){
+  document.querySelectorAll('.bank-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('bk-'+i).classList.add('selected');
+  const b=B[i];
+  document.getElementById('dc').innerHTML=`
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;">${b.sym}</div>
+    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">${b.nm}</div>
+    <div class="detail-stat-grid"><div class="ds"><div class="l">Price</div><div class="val ${b.d}">$${b.pr}</div></div><div class="ds"><div class="l">Day Change</div><div class="val ${b.d}">${b.ch}</div></div><div class="ds"><div class="l">Market Cap</div><div class="val">${b.mc}</div></div><div class="ds"><div class="l">CET1 Ratio</div><div class="val">${b.c1}</div></div><div class="ds"><div class="l">NII Guide</div><div class="val">${b.ni}</div></div><div class="ds"><div class="l">Risk Level</div><div class="val" style="color:${b.rl>=7?'var(--accent-red)':b.rl>=5?'var(--accent-amber)':'var(--accent-green)'}">${b.rk}</div></div></div>
+    <div class="dd"></div><div class="dst">◆ SIGNALS & INTELLIGENCE</div>
+    ${b.sg.map(s=>`<div class="dsig ${s.y}">${s.t}</div>`).join('')}
+    <div class="dq"><div class="t">"${b.q}"</div><div class="a">— INTELLIGENCE BRIEF</div></div>`;
+}
+
+function togPillar(i){
+  const el=document.getElementById('pc-'+i);
+  const was=el.classList.contains('expanded');
+  document.querySelectorAll('.pfc').forEach(c=>c.classList.remove('expanded'));
+  if(!was){
+    el.classList.add('expanded');
+    const p=P[i];const rc=p.rk>=9?'var(--critical)':p.rk>=8?'var(--high)':'var(--elevated)';
+    document.getElementById('dc').innerHTML=`
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;">PILLAR ${p.n}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;">${p.nm}</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">${p.sub}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:${rc};margin-bottom:12px;">SYSTEMIC RISK: ${p.rl}</div>
+      <div class="dd"></div><div class="dst">KEY METRICS</div>
+      ${p.stats.map(s=>`<div class="psr"><span class="l">${s.l}</span><span class="v">${s.v}</span></div>`).join('')}
+      <div class="dd"></div><div class="dst">WATCH SIGNALS</div>
+      <div class="signal-tags">${p.sigs.map(s=>`<span class="stag">${s}</span>`).join('')}</div>
+      <div class="dq" style="margin-top:16px"><div class="t">"Build the institution so it survives across a wide range of adverse outcomes, rather than betting on a single scenario."</div><div class="a">— JAMIE DIMON</div></div>`;
+    setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+  }
+}
+
+function selMacro(num){
+  document.querySelectorAll('.mc').forEach(c=>c.classList.remove('selected'));
+  const el=document.getElementById('mc-'+num);if(el)el.classList.add('selected');
+  let ind=null;MC.forEach(cat=>{cat.inds.forEach(m=>{if(m.n===num)ind=m;});});
+  if(!ind)return;
+  document.getElementById('dc').innerHTML=`
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;">INDICATOR #${ind.n}</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;margin-bottom:4px;">${ind.nm}</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-bottom:8px;" class="${ind.sc}">◆ SIGNAL: ${ind.st}</div>
+    <div style="font-size:11px;color:var(--text-dim);margin-bottom:14px;">KEY ASSETS: ${ind.as}</div>
+    <div class="dd"></div><div class="dst">⚠ SIGNAL COMBINATIONS</div>
+    ${ind.co.map(c=>`<div class="ci"><span class="ci-i">◆</span><span>${c}</span></div>`).join('')}
+    <div class="dd"></div><div class="dst">✓ INTERPRETATION CHECKLIST</div>
+    ${ind.cl.map((c,j)=>`<div class="cli"><span class="cli-n">${j+1}.</span><span>${c}</span></div>`).join('')}
+    <div class="dd"></div><div class="dst">ANALYST NOTE</div>
+    <div style="font-size:11px;color:var(--text-secondary);line-height:1.7;font-style:italic;">${ind.nt}</div>`;
+}
+
+function togDC(id){
+  const el=document.getElementById(id);
+  el.classList.toggle('expanded');
+  let item=null;
+  DP.forEach((p,i)=>{if('dp-'+i===id)item={type:'Philosophy',t:p.t,b:p.b};});
+  DF.forEach((f,i)=>{if('df-'+i===id)item={type:'Framework',t:f.t,b:f.b};});
+  if(item&&el.classList.contains('expanded')){
+    document.getElementById('dc').innerHTML=`
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;">${item.type.toUpperCase()}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:12px;">${item.t}</div>
+      <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;">${item.b}</div>
+      <div class="dq" style="margin-top:16px"><div class="t">"The appropriate response is not to try harder to predict — but to build institutions that can withstand a wide range of outcomes."</div><div class="a">— JAMIE DIMON</div></div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
