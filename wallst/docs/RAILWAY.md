@@ -4,7 +4,9 @@ The **API** lives in `wallst/server`. The **website** is `wallst/website` (deplo
 
 ## Fix “old Banking Command Center” at your Railway URL
 
-If `https://your-app.up.railway.app/` shows the legacy HTML (BANK MAP, CREDIT SYSTEM, ~57KB page) and `/api/news` returns **404**, Railway is building from the **repo root** and serving root `index.html`.
+If `https://your-app.up.railway.app/` shows the legacy HTML (BANK MAP, CREDIT SYSTEM, ~57KB page) and `/api/news` returns **404**, Railway is serving a **static site** (Caddy in logs: `http.log.access.log0`, `Content-Type: text/html`, etag `dixz8rxib6yo18b8`). That means the **repo root** `index.html` is being deployed, not `wallst/server`.
+
+The API uses a **Dockerfile** in `wallst/server` so builds always run `npm start` (Express), not Caddy static.
 
 1. Railway → your service → **Settings** → **Source**
 2. Set **Root Directory** to: `wallst/server` (no leading `/` — use `wallst/server`, not `/wallst/server`)
