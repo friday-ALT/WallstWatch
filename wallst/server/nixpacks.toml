@@ -1,0 +1,9 @@
+# Force Node API (avoid Nixpacks treating the repo as a static site).
+[variables]
+NIXPACKS_NODE_VERSION = "22"
+
+[phases.install]
+cmds = ["npm ci"]
+
+[start]
+cmd = "npm start"

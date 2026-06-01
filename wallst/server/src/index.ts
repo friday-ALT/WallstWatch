@@ -22,6 +22,18 @@ app.use(cors());
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
+// Root: API only (frontend is on Vercel). Helps verify Railway root = wallst/server.
+app.get('/', (_req, res) => {
+  res.json({
+    service: 'wallst-watch-api',
+    version: '1',
+    docs: 'Use /api/news, /api/auth, etc. Deploy the React app separately (wallst/website).',
+  });
+});
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, service: 'wallst-watch-api' });
+});
+
 app.use('/api/auth', authRouter);
 app.use('/api/platform', platformRouter);
 

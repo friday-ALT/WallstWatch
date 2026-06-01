@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://wallstwatch-production.up.railway.app/api/:path*" },
+    { "source": "/ws", "destination": "https://wallstwatch-production.up.railway.app/ws" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
