@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { authMiddleware } from './auth.js';
 import db from '../db/database.js';
 import { DEALS_FEED } from '../data/dealsFeed.js';
-import { BANKING_REGULATORY } from '../data/bankingRegulatory.js';
+import { BANKING_REGULATORY, RegulatoryItem } from '../data/bankingRegulatory.js';
 
 const router = Router();
 const API = 'https://finnhub.io/api/v1';
@@ -19,7 +19,7 @@ router.get('/deals', (_req, res) => {
 // ── Banking regulatory (P1) ───────────────────────────────────────────────────
 router.get('/banking/regulatory', (req, res) => {
   const sym = String(req.query.sym ?? '').toUpperCase();
-  const items = sym ? BANKING_REGULATORY.filter(r => r.sym === sym) : BANKING_REGULATORY;
+  const items = sym ? BANKING_REGULATORY.filter((r: RegulatoryItem) => r.sym === sym) : BANKING_REGULATORY;
   res.json(items);
 });
 
