@@ -369,7 +369,7 @@ app.post('/api/stripe/checkout', authMiddleware as any, async (req: any, res) =>
       line_items: [{ price: priceId, quantity: 1 }],
       automatic_tax: { enabled: true },
       billing_address_collection: 'required',
-      customer_update: { address: 'auto', name: 'auto' },
+      customer_email: req.user.email,
       success_url: `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/dashboard?upgraded=1`,
       cancel_url:  `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/pricing`,
       metadata: { userId: req.user.id, plan },
