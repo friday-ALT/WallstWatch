@@ -111,7 +111,7 @@ export function Landing() {
         <h1 className="hero-title">WALLST<br /><span>WATCH</span></h1>
         <p className="hero-subtitle">Banking Command Center</p>
         <p className="hero-desc">
-          Institutional-grade banking intelligence. 12 major banks, insider transactions, Fed policy, AI research — one terminal. Bloomberg charges $2,000/month. Pro from £2.99/month.
+          Institutional-grade banking intelligence. 12 major banks, insider transactions, Fed policy, AI research — one terminal. Bloomberg charges $2,000/month. Pro from $2.99/month.
         </p>
         <div className="hero-ctas">
           <button className="btn-primary" onClick={() => navigate('/map')}>▶ Open Market Map</button>
@@ -406,8 +406,8 @@ export function Landing() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
             {[
               { name: 'FREE',         price: '$0',   sub: 'forever',   color: '#4a5568', features: ['6 banks', 'Delayed quotes', 'Daily brief'], highlight: false },
-              { name: 'PRO',          price: '£2.99',  sub: 'per month', color: '#ff3b3b', features: ['All 12 banks', 'Live WebSocket', 'Insider data', 'Fed Watch', 'Charts'], highlight: true },
-              { name: 'PROFESSIONAL', price: '£7.99',  sub: 'per month', color: '#b388ff', features: ['Everything in Pro', 'AI research', 'Options flow', 'Dark pool', 'PDF export'], highlight: false },
+              { name: 'PRO',          price: '$2.99',  sub: 'per month', color: '#ff3b3b', features: ['All 12 banks', 'Live WebSocket', 'Insider data', 'Fed Watch', 'Charts'], highlight: true },
+              { name: 'PROFESSIONAL', price: '$7.99',  sub: 'per month', color: '#b388ff', features: ['Everything in Pro', 'AI research', 'Options flow', 'Dark pool', 'PDF export'], highlight: false },
               { name: 'INSTITUTIONAL',price: 'Custom', sub: 'tailored', color: '#ffc107', features: ['Teams seats', 'API access', 'Webhooks', 'SLA guarantee'], highlight: false },
             ].map((p) => (
               <div key={p.name} style={{

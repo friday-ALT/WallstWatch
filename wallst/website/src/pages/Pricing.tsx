@@ -28,7 +28,7 @@ const INDIVIDUAL_PLANS = [
   {
     name: 'PRO',
     price: { monthly: 2.99, annual: 2.99 },
-    currency: '£',
+    currency: '$',
     period: 'per month',
     color: '#ff3b3b',
     badge: 'MOST POPULAR',
@@ -50,7 +50,7 @@ const INDIVIDUAL_PLANS = [
   {
     name: 'PROFESSIONAL',
     price: { monthly: 7.99, annual: 7.99 },
-    currency: '£',
+    currency: '$',
     period: 'per month',
     color: '#b388ff',
     badge: 'BEST VALUE',
@@ -117,8 +117,8 @@ const BUSINESS_PLANS = [
 const FAQ = [
   { q: 'Do I need a credit card to start?', a: 'No. The free tier is genuinely free — no card required. Upgrade any time from your account settings.' },
   { q: 'What data sources do you use?', a: 'Finnhub API for real-time quotes, news, and fundamentals. SEC EDGAR for insider filings. Federal Reserve for rate data. Anthropic Claude for AI research.' },
-  { q: 'How is this different from Bloomberg?', a: 'Bloomberg costs ~$2,000/month. WallSt Watch Pro is £2.99/month — web-native, AI-powered, and a fraction of the cost.' },
-  { q: 'Is VAT included?', a: 'Prices are shown in GBP. Stripe Tax calculates VAT or sales tax at checkout based on your billing address (inclusive or exclusive per your Stripe price settings).' },
+  { q: 'How is this different from Bloomberg?', a: 'Bloomberg costs ~$2,000/month. WallSt Watch Pro is $2.99/month — web-native, AI-powered, and a fraction of the cost.' },
+  { q: 'Is tax included?', a: 'Prices are shown in USD. Stripe Tax calculates VAT or sales tax at checkout based on your billing address (inclusive or exclusive per your Stripe price settings).' },
   { q: 'Can I cancel any time?', a: 'Yes. Cancel from your account settings with one click. No questions, no friction.' },
   { q: 'Is the market data delayed?', a: 'Pro and above get live WebSocket quotes updating every 8 seconds. Free tier has 15-minute delayed prices.' },
   { q: 'Do you offer annual billing?', a: 'Monthly billing at launch. Annual plans may be added later.' },
@@ -134,7 +134,7 @@ function PlanCard({ plan, annual, isBusiness = false }: { plan: typeof INDIVIDUA
   const { user, token } = useAuth();
 
   const price = annual ? (plan.price as any).annual : (plan.price as any).monthly;
-  const currency = (plan as { currency?: string }).currency ?? '£';
+  const currency = (plan as { currency?: string }).currency ?? '$';
   const isHighlighted = plan.badge === 'MOST POPULAR' || plan.badge === 'BEST VALUE';
   const isCurrent = user && plan.name === user.plan.toUpperCase();
 
@@ -329,7 +329,7 @@ export function Pricing() {
             BLOOMBERG AT 1%<br />OF THE PRICE
           </h1>
           <p style={{ fontSize: 15, color: 'var(--text-sec)', maxWidth: 480, margin: '0 auto 32px' }}>
-            Bloomberg Terminal costs ~$24,000/year. WallSt Watch Pro is £2.99/month, Professional £7.99/month. Start free — no card required.
+            Bloomberg Terminal costs ~$24,000/year. WallSt Watch Pro is $2.99/month, Professional $7.99/month. Start free — no card required.
           </p>
 
           {/* VS callout */}
@@ -345,7 +345,7 @@ export function Pricing() {
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', fontWeight: 700 }}>VS</div>
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--text-dim)', letterSpacing: 2, marginBottom: 3 }}>WALLST WATCH PRO</div>
-              <div style={{ fontFamily: 'var(--font-disp)', fontSize: 26, color: 'var(--green)', letterSpacing: 2 }}>£2.99<span style={{ fontSize: 12 }}>/mo</span></div>
+              <div style={{ fontFamily: 'var(--font-disp)', fontSize: 26, color: 'var(--green)', letterSpacing: 2 }}>$2.99<span style={{ fontSize: 12 }}>/mo</span></div>
             </div>
             <div style={{ background: 'var(--green)18', border: '1px solid var(--green)44', padding: '6px 12px', borderRadius: 3 }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, color: 'var(--green)', letterSpacing: 1 }}>99.8% CHEAPER</div>
@@ -353,7 +353,7 @@ export function Pricing() {
           </div>
 
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: 1 }}>
-            GBP · MONTHLY BILLING · TAX CALCULATED AT CHECKOUT (STRIPE TAX)
+            USD · MONTHLY BILLING · TAX CALCULATED AT CHECKOUT (STRIPE TAX)
           </p>
         </div>
 

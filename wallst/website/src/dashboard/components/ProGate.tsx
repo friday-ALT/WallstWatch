@@ -29,7 +29,7 @@ export function ProGate({ children, feature, requiredPlan = 'pro' }: Props) {
         {feature}
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-dim)', maxWidth: 320, lineHeight: 1.8, marginBottom: 24 }}>
-        This feature requires a {requiredPlan === 'pro' ? 'Pro (£2.99/mo)' : requiredPlan === 'professional' ? 'Professional (£7.99/mo)' : 'Institutional (custom)'} subscription.
+        This feature requires a {requiredPlan === 'pro' ? 'Pro ($2.99/mo)' : requiredPlan === 'professional' ? 'Professional ($7.99/mo)' : 'Institutional (custom)'} subscription.
         {!user && ' Sign in or create a free account to start your 14-day Pro trial.'}
         {user && (user as any).trialDaysLeft === 0 && ' Your trial has expired. Upgrade to keep access.'}
       </div>
