@@ -1,98 +1,119 @@
-import React, { useEffect, useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { RefreshControl, ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { apiFetch } from '../../constants/api';
 import { useLiveQuotes } from '../../hooks/useLiveQuotes';
-import { C } from '../../constants/colors';
+import { openExternalUrl } from '../../utils/openUrl';
+import { SectionLabel } from '../../components/SectionLabel';
+import { SurfaceCard } from '../../components/SurfaceCard';
+import { ThemeBucketCard } from '../../components/ThemeBucketCard';
+import { ALL_THEME_SYMBOLS, MARKET_THEMES } from '../../data/marketThemes';
+import { F, space } from '../../constants/theme';
+import { useScreenPad } from '../../hooks/useScreenPad';
+import { useColors } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
+import type { AppColors } from '../../constants/colors';
 
-const MACRO_ITEMS = [
-  { label: 'Fed Funds Rate', val: '4.50%', note: 'Target range 4.25–4.50%', color: C.amber },
-  { label: 'US 10Y Yield',   val: '4.38%', note: '↑ from 3.9% (Jan)',       color: C.amber },
-  { label: 'US 2Y Yield',    val: '4.72%', note: 'Inverted spread: -34bps', color: C.red },
-  { label: 'Spread (2s10s)', val: '-34bps', note: 'Recessionary signal',   color: C.red },
-  { label: 'CPI (Mar)',      val: '3.2%',  note: 'Above 2% target',        color: C.amber },
-  { label: 'PCE (Feb)',      val: '2.8%',  note: 'Fed preferred measure',  color: C.amber },
-  { label: 'GDP Q4 2025',    val: '+2.4%', note: 'Annualized SAAR',        color: C.green },
-  { label: 'Unemployment',   val: '3.9%',  note: 'Near full employment',   color: C.green },
-  { label: 'DXY Index',      val: '104.2', note: 'Dollar strengthening',   color: C.blue },
-  { label: 'Gold (XAU)',     val: '$2,312', note: 'Safe haven demand',     color: C.amber },
-  { label: 'WTI Crude',      val: '$79.2', note: '↑ on Iran tensions',    color: C.red },
-  { label: 'VIX',            val: '18.4',  note: 'Elevated vs 2024 avg',  color: C.amber },
-];
+const PULSE_SYMS = ['SPY', 'QQQ', 'DIA', 'IWM', 'VIX'] as const;
+
+const makeStyles = (c: AppColors) => ({
+  root: { flex: 1, backgroundColor: c.bgDark },
+  quoteRow: { flexDirection: 'row' as const, alignItems: 'center' as const, paddingVertical: space.sm + 2, gap: 8 },
+  quoteSymbol: { fontSize: 13, fontFamily: F.mono.bold, color: c.textPrimary, width: 44 },
+  quotePrice: { fontSize: 15, fontFamily: F.mono.bold, minWidth: 72, textAlign: 'right' as const },
+  quoteChg: { fontSize: 12, fontFamily: F.mono.regular, minWidth: 56, textAlign: 'right' as const },
+  newsItem: { paddingVertical: space.md },
+  newsHeadline: { fontSize: 16, fontFamily: F.sans.semibold, color: c.textPrimary, lineHeight: 22 },
+  newsMeta: { fontSize: 11, fontFamily: F.mono.regular, color: c.textDim, marginTop: 4 },
+  dim: { fontSize: 14, fontFamily: F.sans.regular, color: c.textDim, textAlign: 'center' as const, padding: space.md },
+  divider: { height: 1, backgroundColor: c.border + '88' },
+  sectionGap: { marginTop: space.lg },
+});
 
 export default function MacroScreen() {
+  const colors = useColors();
+  const s = useThemedStyles(makeStyles);
+  const screenPad = useScreenPad({ gap: space.md, paddingTop: space.sm });
   const [news, setNews] = useState<any[]>([]);
-  const quotes = useLiveQuotes(['SPY', 'QQQ', 'VIX']);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const quoteSymbols = useMemo(
+    () => [...new Set([...ALL_THEME_SYMBOLS, ...PULSE_SYMS])],
+    []
+  );
+  const quotes = useLiveQuotes(quoteSymbols);
+
+  const loadNews = () =>
+    apiFetch<any[]>('/news')
+      .then((items) => setNews(items.slice(0, 6)))
+      .catch(() => {});
 
   useEffect(() => {
-    apiFetch<any[]>('/news')
-      .then((items) => setNews(items.slice(0, 8)))
-      .catch(() => {});
+    loadNews();
   }, []);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadNews();
+    setRefreshing(false);
+  };
+
   return (
-    <ScrollView style={s.root} contentContainerStyle={{ padding: 12, gap: 12 }}>
-      <Text style={s.sectionTitle}>MACRO ENVIRONMENT</Text>
+    <ScrollView
+      style={s.root}
+      contentContainerStyle={screenPad}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.red} />
+      }
+    >
+      <SectionLabel subtitle="CNBC-style thematic watchlists — live prices">
+        Market dashboard
+      </SectionLabel>
 
-      <View style={s.card}>
-        <Text style={s.cardTitle}>MARKET PULSE</Text>
-        {(['SPY', 'QQQ', 'VIX'] as const).map((sym) => {
-          const q = quotes[sym];
-          const up = q ? q.dp >= 0 : true;
-          return (
-            <View key={sym} style={s.quoteRow}>
-              <Text style={s.quoteSymbol}>{sym}</Text>
-              <Text style={[s.quotePrice, { color: up ? C.green : C.red }]}>
-                {q ? `$${q.c.toFixed(2)}` : '—'}
-              </Text>
-              <Text style={[s.quoteChg, { color: up ? C.green : C.red }]}>
-                {q ? `${up ? '+' : ''}${q.dp.toFixed(2)}%` : ''}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
+      {MARKET_THEMES.map((theme) => (
+        <ThemeBucketCard key={theme.id} theme={theme} quotes={quotes} />
+      ))}
 
-      <View style={s.card}>
-        <Text style={s.cardTitle}>KEY INDICATORS</Text>
-        {MACRO_ITEMS.map((item, i) => (
-          <View key={i} style={s.macroRow}>
-            <Text style={s.macroLabel}>{item.label}</Text>
-            <View style={{ flex: 1 }} />
-            <Text style={[s.macroVal, { color: item.color }]}>{item.val}</Text>
-            <Text style={s.macroNote}>{item.note}</Text>
+      <View style={s.sectionGap}>
+        <SectionLabel subtitle="Major US indexes">Index pulse</SectionLabel>
+        <SurfaceCard padded={false}>
+          <View style={{ paddingHorizontal: space.md }}>
+            {PULSE_SYMS.map((sym, i, arr) => {
+              const q = quotes[sym];
+              const up = (q?.dp ?? 0) >= 0;
+              return (
+                <View key={sym}>
+                  <View style={s.quoteRow}>
+                    <Text style={s.quoteSymbol}>{sym}</Text>
+                    <View style={{ flex: 1 }} />
+                    <Text style={[s.quotePrice, { color: up ? colors.green : colors.red }]}>
+                      {q?.c != null ? (sym === 'VIX' ? q.c.toFixed(2) : `$${q.c.toFixed(2)}`) : '—'}
+                    </Text>
+                    <Text style={[s.quoteChg, { color: up ? colors.green : colors.red }]}>
+                      {q?.dp != null ? `${up ? '+' : ''}${q.dp.toFixed(2)}%` : ''}
+                    </Text>
+                  </View>
+                  {i < arr.length - 1 && <View style={s.divider} />}
+                </View>
+              );
+            })}
           </View>
-        ))}
+        </SurfaceCard>
       </View>
 
-      <View style={s.card}>
-        <Text style={s.cardTitle}>MARKET NEWS</Text>
-        {news.length === 0 && <Text style={s.dim}>Loading...</Text>}
-        {news.map((item, i) => (
-          <TouchableOpacity key={i} style={s.newsItem} onPress={() => item.url && Linking.openURL(item.url)}>
-            <Text style={s.newsHeadline}>{item.headline}</Text>
-            <Text style={s.newsMeta}>{item.source} · {new Date((item.datetime ?? 0) * 1000).toLocaleTimeString()}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={s.sectionGap}>
+        <SectionLabel>Macro headlines</SectionLabel>
+        <SurfaceCard padded={false}>
+          <View style={{ paddingHorizontal: space.md }}>
+            {news.length === 0 && <Text style={s.dim}>Loading…</Text>}
+            {news.map((item, i) => (
+              <TouchableOpacity key={i} style={s.newsItem} onPress={() => openExternalUrl(item.url)}>
+                <Text style={s.newsHeadline}>{item.headline}</Text>
+                <Text style={s.newsMeta}>{item.source}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </SurfaceCard>
       </View>
     </ScrollView>
   );
 }
-
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bgDark },
-  sectionTitle: { fontSize: 10, fontFamily: 'JetBrainsMono_700Bold', color: C.textDim, letterSpacing: 3, marginBottom: 4 },
-  card: { backgroundColor: C.bgCard, borderWidth: 1, borderColor: C.border, borderRadius: 4, padding: 12, gap: 8 },
-  cardTitle: { fontSize: 10, fontFamily: 'JetBrainsMono_700Bold', color: C.textDim, letterSpacing: 2, marginBottom: 4, borderBottomWidth: 1, borderBottomColor: C.border, paddingBottom: 6 },
-  quoteRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: C.border, gap: 8 },
-  quoteSymbol: { fontSize: 13, fontFamily: 'JetBrainsMono_700Bold', color: C.textPrimary, width: 50 },
-  quotePrice: { fontSize: 14, fontFamily: 'JetBrainsMono_700Bold', width: 80 },
-  quoteChg: { fontSize: 11, fontFamily: 'JetBrainsMono_400Regular' },
-  macroRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: C.border + '55', gap: 8 },
-  macroLabel: { fontSize: 10, fontFamily: 'JetBrainsMono_400Regular', color: C.textSecondary, width: 120 },
-  macroVal: { fontSize: 11, fontFamily: 'JetBrainsMono_700Bold', width: 68, textAlign: 'right' },
-  macroNote: { fontSize: 9, fontFamily: 'JetBrainsMono_400Regular', color: C.textDim, flex: 1 },
-  newsItem: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border + '55' },
-  newsHeadline: { fontSize: 12, fontFamily: 'JetBrainsMono_700Bold', color: C.textPrimary, lineHeight: 18, marginBottom: 3 },
-  newsMeta: { fontSize: 9, fontFamily: 'JetBrainsMono_400Regular', color: C.textDim },
-  dim: { fontSize: 11, fontFamily: 'JetBrainsMono_400Regular', color: C.textDim, textAlign: 'center', padding: 12 },
-});

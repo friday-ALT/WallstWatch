@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import db from '../db/database.js';
 
+const SIGNUP_WATCHLIST = ['SPY', 'QQQ', 'JPM', 'GS', 'NVDA', 'XLF'];
+
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET ?? 'wallst-watch-secret-CHANGE-IN-PROD';
 const TRIAL_DAYS = 14;
@@ -92,8 +94,10 @@ router.post('/signup', async (req: Request, res: Response) => {
   };
   db.prepare('INSERT INTO users (id,email,password_hash,name,plan,trial_ends,created_at) VALUES (?,?,?,?,?,?,?)')
     .run(user.id, user.email, user.password_hash, user.name, user.plan, user.trial_ends, user.created_at);
-  db.prepare('INSERT INTO watchlist (user_id,symbol,conviction,notes,added_at) VALUES (?,?,?,?,?)').run(user.id,'JPM','NEUTRAL','Default watchlist',user.created_at);
-  db.prepare('INSERT INTO watchlist (user_id,symbol,conviction,notes,added_at) VALUES (?,?,?,?,?)').run(user.id,'GS','NEUTRAL','Default watchlist',user.created_at);
+  for (const sym of SIGNUP_WATCHLIST) {
+    db.prepare('INSERT INTO watchlist (user_id,symbol,conviction,notes,added_at) VALUES (?,?,?,?,?)')
+      .run(user.id, sym, 'NEUTRAL', 'Default watchlist', user.created_at);
+  }
   sendWelcomeEmail(email, name);
   res.json({ token: makeToken(user), user: safeUser(user) });
 });
@@ -154,6 +158,14 @@ router.post('/alerts', authMiddleware, (req: any, res: Response) => {
   const id = Date.now().toString();
   db.prepare('INSERT INTO alerts (id,user_id,symbol,type,threshold,active) VALUES (?,?,?,?,?,1)')
     .run(id, req.user.id, sym.toUpperCase(), type, threshold ?? '');
+  res.json(db.prepare('SELECT * FROM alerts WHERE user_id = ?').all(req.user.id));
+});
+router.patch('/alerts/:id', authMiddleware, (req: any, res: Response) => {
+  const { active } = req.body;
+  if (typeof active === 'boolean') {
+    db.prepare('UPDATE alerts SET active = ? WHERE id = ? AND user_id = ?')
+      .run(active ? 1 : 0, req.params.id, req.user.id);
+  }
   res.json(db.prepare('SELECT * FROM alerts WHERE user_id = ?').all(req.user.id));
 });
 router.delete('/alerts/:id', authMiddleware, (req: any, res: Response) => {

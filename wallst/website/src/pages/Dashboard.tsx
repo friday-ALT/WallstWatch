@@ -34,9 +34,7 @@ import { ProGate } from '../dashboard/components/ProGate';
 import { TabNav, Tab } from '../dashboard/components/TabNav';
 import { useAuth } from '../auth/AuthContext';
 import { effectivePlanLabel } from '../config/features';
-import '../styles/dashboard.css';
-
-const TICKER_SYMS = ['JPM','GS','MS','BAC','C','WFC','SPY','QQQ','VIX'];
+import { DASHBOARD_TICKER_SYMS } from '../dashboard/data/marketSymbols';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -54,7 +52,7 @@ export function Dashboard() {
   const [time, setTime] = useState('');
   const [news, setNews] = useState<any[]>([]);
   const [bankNews, setBankNews] = useState<any[]>([]);
-  const quotes = useLiveQuotes(TICKER_SYMS);
+  const quotes = useLiveQuotes(DASHBOARD_TICKER_SYMS);
 
   useEffect(() => {
     const tick = () => setTime(new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}));
@@ -97,7 +95,7 @@ export function Dashboard() {
           <span className="dc-header-badge">COMMAND CENTER</span>
         </div>
         <div className="dc-ticker-inline">
-          {TICKER_SYMS.map(sym => {
+          {DASHBOARD_TICKER_SYMS.map(sym => {
             const q = quotes[sym]; const up = q ? q.dp >= 0 : true;
             return (
               <div key={sym} className="dc-tick-item">

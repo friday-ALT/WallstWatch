@@ -63,11 +63,11 @@ The app listens at: **`POST /api/stripe/webhook`**
 
 2. Click **Add endpoint**
 
-3. **Endpoint URL:**
+3. **Endpoint URL** (WallSt Watch production):
    ```text
-   https://YOUR-API-DOMAIN.com/api/stripe/webhook
+   https://wallstwatch-production.up.railway.app/api/stripe/webhook
    ```
-   Example: `https://wallst-api.railway.app/api/stripe/webhook`
+   Use the **Railway API host**, not the Vercel URL. Stripe calls the API directly.
 
 4. **Events to send** — at minimum:
    - `checkout.session.completed`
@@ -111,8 +111,8 @@ If payment succeeds but plan stays `free`, the webhook secret is wrong or the en
 
 ```env
 STRIPE_SECRET_KEY=sk_live_... or sk_test_...
-STRIPE_PRICE_PRO=price_...
-STRIPE_PRICE_PROFESSIONAL=price_...
+STRIPE_PRICE_PRO=price_...          # USD $2.99/mo (not legacy GBP price_...)
+STRIPE_PRICE_PROFESSIONAL=price_...  # USD $7.99/mo
 STRIPE_WEBHOOK_SECRET=whsec_...
 CLIENT_URL=https://your-frontend-domain.com
 ```

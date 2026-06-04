@@ -2,11 +2,9 @@ import { useEffect, useState } from 'react';
 import { Quote } from '../hooks/useLiveQuotes';
 import { fmtPrice, fmtPct, upColor } from '../utils/fmt';
 import { Skeleton } from '../components/Skeleton';
+import { DEFAULT_WATCHLIST, SYMBOLS_BY_CATEGORY, type WatchlistItem } from '../data/marketSymbols';
 
-type Conviction = 'STRONG BUY' | 'BUY' | 'NEUTRAL' | 'SELL' | 'STRONG SELL';
-interface WatchItem { sym: string; target: number; conviction: Conviction; notes: string; addedAt: string; }
-
-const CONVICTION_COLOR: Record<Conviction, string> = {
+const CONVICTION_COLOR: Record<WatchlistItem['conviction'], string> = {
   'STRONG BUY':  '#00e676',
   'BUY':         '#4caf50',
   'NEUTRAL':     '#ffc107',
@@ -16,17 +14,11 @@ const CONVICTION_COLOR: Record<Conviction, string> = {
 
 interface Props { quotes: Record<string, Quote>; token: string | null; }
 
-const DEFAULT_LIST: WatchItem[] = [
-  { sym: 'JPM', target: 310, conviction: 'BUY',    notes: 'Fortress capital, buyback, FOMC tailwind', addedAt: '2026-04-01' },
-  { sym: 'GS',  target: 590, conviction: 'NEUTRAL', notes: 'Earnings risk from FICC volatility', addedAt: '2026-04-05' },
-  { sym: 'NVDA',target: 1100,conviction: 'STRONG BUY','notes': 'AI capex supercycle, data centre demand', addedAt: '2026-04-10' },
-];
-
 export function WatchlistView({ quotes, token }: Props) {
-  const [list, setList]   = useState<WatchItem[]>([]);
+  const [list, setList]   = useState<WatchlistItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [form, setForm]   = useState({ sym: '', target: '', conviction: 'NEUTRAL' as Conviction, notes: '' });
+  const [form, setForm]   = useState({ sym: '', target: '', conviction: 'NEUTRAL' as WatchlistItem['conviction'], notes: '' });
 
   useEffect(() => {
     const load = async () => {
@@ -38,7 +30,7 @@ export function WatchlistView({ quotes, token }: Props) {
             setList(rows.map((r: any) => ({
               sym: r.symbol,
               target: r.target ?? 0,
-              conviction: (r.conviction ?? 'NEUTRAL') as Conviction,
+              conviction: (r.conviction ?? 'NEUTRAL') as WatchlistItem['conviction'],
               notes: r.notes ?? '',
               addedAt: r.added_at?.slice(0, 10) ?? '',
             })));
@@ -47,14 +39,14 @@ export function WatchlistView({ quotes, token }: Props) {
           }
         } catch { /* fallback */ }
       }
-      try { setList(JSON.parse(localStorage.getItem('ww_watchlist') ?? JSON.stringify(DEFAULT_LIST))); }
-      catch { setList(DEFAULT_LIST); }
+      try { setList(JSON.parse(localStorage.getItem('ww_watchlist') ?? JSON.stringify(DEFAULT_WATCHLIST))); }
+      catch { setList(DEFAULT_WATCHLIST); }
       setLoaded(true);
     };
     load();
   }, [token]);
 
-  const save = async (updated: WatchItem[]) => {
+  const save = async (updated: WatchlistItem[]) => {
     setList(updated);
     localStorage.setItem('ww_watchlist', JSON.stringify(updated));
     if (token) {
@@ -71,7 +63,7 @@ export function WatchlistView({ quotes, token }: Props) {
 
   const add = () => {
     if (!form.sym || !form.target) return;
-    const item: WatchItem = { sym: form.sym.toUpperCase(), target: parseFloat(form.target), conviction: form.conviction, notes: form.notes, addedAt: new Date().toISOString().slice(0, 10) };
+    const item: WatchlistItem = { sym: form.sym.toUpperCase(), target: parseFloat(form.target), conviction: form.conviction, notes: form.notes, addedAt: new Date().toISOString().slice(0, 10) };
     save([...list.filter(l => l.sym !== item.sym), item]);
     setForm({ sym: '', target: '', conviction: 'NEUTRAL', notes: '' }); setAdding(false);
   };
@@ -81,9 +73,9 @@ export function WatchlistView({ quotes, token }: Props) {
   return (
     <div className="dc-scroll-area">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div className="dc-section-label" style={{ margin: 0 }}>WATCHLIST — {list.length} STOCKS</div>
+        <div className="dc-section-label" style={{ margin: 0 }}>WATCHLIST — {list.length} SYMBOLS</div>
         <button onClick={() => setAdding(!adding)} style={{ background: 'var(--red)', border: 'none', color: '#fff', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: 1, padding: '7px 14px', borderRadius: 3, cursor: 'pointer' }}>
-          {adding ? '✕ CANCEL' : '+ ADD STOCK'}
+          {adding ? '✕ CANCEL' : '+ ADD SYMBOL'}
         </button>
       </div>
 
@@ -104,7 +96,7 @@ export function WatchlistView({ quotes, token }: Props) {
             ))}
             <div style={{ flex: 1, minWidth: 120 }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 7, color: 'var(--text-dim)', letterSpacing: 1, marginBottom: 4 }}>CONVICTION</div>
-              <select value={form.conviction} onChange={e => setForm(p => ({ ...p, conviction: e.target.value as Conviction }))}
+              <select value={form.conviction} onChange={e => setForm(p => ({ ...p, conviction: e.target.value as WatchlistItem['conviction'] }))}
                 style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 3, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text)', outline: 'none' }}>
                 {Object.keys(CONVICTION_COLOR).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -116,6 +108,20 @@ export function WatchlistView({ quotes, token }: Props) {
               style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 3, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }} />
           </div>
           <button onClick={add} style={{ background: 'var(--red)', border: 'none', color: '#fff', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: '8px 20px', borderRadius: 3, cursor: 'pointer' }}>ADD TO WATCHLIST →</button>
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 7, color: 'var(--text-dim)', letterSpacing: 1, marginBottom: 8 }}>QUICK ADD — INDEXES & MARKET</div>
+            {(['Index', 'Sector', 'Mega cap', 'Bank'] as const).map(cat => (
+              <div key={cat} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--text-dim)', width: 64, paddingTop: 5 }}>{cat.toUpperCase()}</span>
+                {(SYMBOLS_BY_CATEGORY[cat] ?? []).map(s => (
+                  <button key={s.sym} type="button" onClick={() => setForm(p => ({ ...p, sym: s.sym }))}
+                    style={{ background: form.sym === s.sym ? 'var(--red)22' : 'var(--bg)', border: `1px solid ${form.sym === s.sym ? 'var(--red)55' : 'var(--border)'}`, color: form.sym === s.sym ? 'var(--red)' : 'var(--text-sec)', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, padding: '4px 10px', borderRadius: 2, cursor: 'pointer' }}>
+                    {s.sym}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

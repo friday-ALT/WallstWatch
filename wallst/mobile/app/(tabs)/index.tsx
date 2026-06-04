@@ -1,142 +1,239 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ScrollView, View, Text, TouchableOpacity, StyleSheet, Modal, Linking,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { BANKS, Bank } from '../../data/banks';
-import { useLiveQuotes } from '../../hooks/useLiveQuotes';
-import { C, riskColor } from '../../constants/colors';
 import { apiFetch } from '../../constants/api';
+import { useLiveQuotes } from '../../hooks/useLiveQuotes';
+import { openExternalUrl } from '../../utils/openUrl';
+import { PulseStrip } from '../../components/PulseStrip';
+import { SectionLabel } from '../../components/SectionLabel';
+import { SurfaceCard } from '../../components/SurfaceCard';
+import { F, space } from '../../constants/theme';
+import { useScreenPad } from '../../hooks/useScreenPad';
+import { useColors } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
+import type { AppColors } from '../../constants/colors';
 
-const SYMS = BANKS.map((b) => b.sym);
+interface NewsItem {
+  headline: string;
+  source: string;
+  datetime: number;
+  summary?: string;
+  url?: string;
+}
 
-export default function BankMapScreen() {
-  const quotes = useLiveQuotes(SYMS);
-  const [selected, setSelected] = useState<Bank | null>(null);
-  const [news, setNews] = useState<any[]>([]);
-  const [loadingNews, setLoadingNews] = useState(false);
+interface EconEvent {
+  event: string;
+  date: string;
+  impact: string;
+  country: string;
+}
 
-  const open = async (bank: Bank) => {
-    setSelected(bank);
-    setNews([]);
-    setLoadingNews(true);
-    try {
-      const items = await apiFetch<any[]>(`/news/${bank.sym}`);
-      setNews(items.slice(0, 6));
-    } catch {}
-    setLoadingNews(false);
+const PULSE_SYMBOLS = ['SPY', 'QQQ', 'VIX', 'XLF'] as const;
+
+const makeStyles = (c: AppColors) => ({
+  root: { flex: 1, backgroundColor: c.bgDark },
+  heroKicker: {
+    fontFamily: F.sans.semibold,
+    fontSize: 13,
+    color: c.red,
+    marginBottom: space.xs,
+  },
+  heroHeadline: {
+    fontFamily: F.sans.bold,
+    fontSize: 24,
+    lineHeight: 30,
+    color: c.textPrimary,
+    letterSpacing: -0.4,
+  },
+  heroSummary: {
+    fontFamily: F.sans.regular,
+    fontSize: 15,
+    lineHeight: 22,
+    color: c.textSecondary,
+    marginTop: space.sm,
+  },
+  heroMeta: {
+    fontFamily: F.sans.regular,
+    fontSize: 13,
+    color: c.textDim,
+    marginTop: space.sm,
+  },
+  eventRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    gap: space.sm,
+    paddingVertical: space.sm + 2,
+  },
+  dot: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
+  eventName: {
+    fontFamily: F.sans.semibold,
+    fontSize: 16,
+    lineHeight: 22,
+    color: c.textPrimary,
+  },
+  eventDate: {
+    fontFamily: F.sans.regular,
+    fontSize: 13,
+    color: c.textDim,
+    marginTop: 2,
+  },
+  newsRow: { paddingVertical: space.md },
+  newsHeadline: {
+    fontFamily: F.sans.semibold,
+    fontSize: 16,
+    lineHeight: 22,
+    color: c.textPrimary,
+  },
+  newsMeta: {
+    fontFamily: F.sans.regular,
+    fontSize: 13,
+    color: c.textDim,
+    marginTop: space.xs,
+  },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: c.border },
+  sectionGap: { marginTop: space.lg },
+});
+
+export default function TodayScreen() {
+  const colors = useColors();
+  const s = useThemedStyles(makeStyles);
+  const screenPad = useScreenPad({ gap: space.lg });
+  const [topNews, setTopNews] = useState<NewsItem[]>([]);
+  const [events, setEvents] = useState<EconEvent[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const quotes = useLiveQuotes([...PULSE_SYMBOLS]);
+
+  const load = useCallback(async () => {
+    const from = new Date().toISOString().slice(0, 10);
+    const to = new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10);
+    const [news, cal] = await Promise.all([
+      apiFetch<NewsItem[]>('/news').catch(() => [] as NewsItem[]),
+      apiFetch<EconEvent[]>(`/economic-calendar?from=${from}&to=${to}`).catch(() => [] as EconEvent[]),
+    ]);
+    setTopNews(news.slice(0, 8));
+    setEvents(cal.filter((e) => e.country === 'US').slice(0, 5));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
   };
 
-  return (
-    <ScrollView style={s.root} contentContainerStyle={s.grid}>
-      <Text style={s.sectionTitle}>BANKING SECTOR GRID</Text>
-      {BANKS.map((b) => {
-        const q = quotes[b.sym];
-        const live = q ? q.c : parseFloat(b.pr);
-        const dp = q ? q.dp : parseFloat(b.ch);
-        const up = dp >= 0;
-        const rc = riskColor(b.rl);
-        return (
-          <TouchableOpacity key={b.sym} style={[s.card, { borderColor: rc + '55' }]} onPress={() => open(b)} activeOpacity={0.75}>
-            <View style={s.cardTop}>
-              <View style={[s.riskBar, { backgroundColor: rc }]} />
-              <Text style={s.sym}>{b.sym}</Text>
-              <View style={[s.riskBadge, { backgroundColor: rc + '22', borderColor: rc }]}>
-                <Text style={[s.riskLabel, { color: rc }]}>{b.rk}</Text>
-              </View>
-            </View>
-            <Text style={s.name}>{b.nm}</Text>
-            <View style={s.priceRow}>
-              <Text style={[s.price, { color: up ? C.green : C.red }]}>${live.toFixed(2)}</Text>
-              <Text style={[s.change, { color: up ? C.green : C.red }]}>{up ? '▲' : '▼'} {Math.abs(dp).toFixed(2)}%</Text>
-            </View>
-            <View style={s.statsRow}>
-              <Stat label="MKT CAP" val={b.mc} />
-              <Stat label="CET1" val={b.c1} />
-              <Stat label="NI" val={b.ni} />
-            </View>
-          </TouchableOpacity>
-        );
-      })}
+  const topHeadline = topNews[0];
+  const pulseItems = useMemo(
+    () =>
+      PULSE_SYMBOLS.map((symbol) => ({
+        symbol,
+        price: quotes[symbol]?.c,
+        change: quotes[symbol]?.dp,
+      })),
+    [quotes]
+  );
 
-      <Modal visible={!!selected} animationType="slide" onRequestClose={() => setSelected(null)}>
-        {selected && (
-          <View style={s.modal}>
-            <View style={s.modalHeader}>
-              <View>
-                <Text style={s.modalSym}>{selected.sym}</Text>
-                <Text style={s.modalName}>{selected.nm}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setSelected(null)} style={s.closeBtn}>
-                <Text style={s.closeText}>✕ CLOSE</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ flex: 1 }}>
-              <Text style={s.sectionTitle}>INTELLIGENCE SIGNALS</Text>
-              {selected.sg.map((sg, i) => (
-                <View key={i} style={[s.signal, { borderLeftColor: sg.y === 'ok' ? C.green : sg.y === 'warn' ? C.red : C.amber }]}>
-                  <Text style={s.signalText}>{sg.t}</Text>
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  }, []);
+
+  return (
+    <ScrollView
+      style={s.root}
+      contentContainerStyle={screenPad}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.red} />
+      }
+    >
+      <SectionLabel subtitle="Markets, news, and your daily brief">{greeting}</SectionLabel>
+
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => openExternalUrl(topHeadline?.url)}
+        disabled={!topHeadline?.url}
+      >
+        <SurfaceCard>
+          <Text style={s.heroKicker}>Top story</Text>
+          <Text style={s.heroHeadline}>
+            {topHeadline?.headline ?? 'Loading market-moving headlines…'}
+          </Text>
+          {topHeadline?.summary ? (
+            <Text style={s.heroSummary} numberOfLines={3}>
+              {topHeadline.summary}
+            </Text>
+          ) : null}
+          <Text style={s.heroMeta}>
+            {topHeadline
+              ? `${topHeadline.source} · ${new Date(topHeadline.datetime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              : 'Updating feed'}
+          </Text>
+        </SurfaceCard>
+      </TouchableOpacity>
+
+      <View style={s.sectionGap}>
+        <SectionLabel subtitle="Live indices and sector ETFs">Market pulse</SectionLabel>
+        <PulseStrip items={pulseItems} />
+      </View>
+
+      {events.length > 0 && (
+        <View style={s.sectionGap}>
+          <SectionLabel subtitle="Upcoming US releases">This week</SectionLabel>
+          <SurfaceCard padded={false}>
+            {events.map((event, index) => (
+              <View key={`${event.event}-${index}`} style={{ paddingHorizontal: space.md }}>
+                <View style={s.eventRow}>
+                  <View
+                    style={[
+                      s.dot,
+                      {
+                        backgroundColor:
+                          event.impact === 'high' ? colors.red : event.impact === 'medium' ? colors.amber : colors.blue,
+                      },
+                    ]}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.eventName}>{event.event}</Text>
+                    <Text style={s.eventDate}>{event.date}</Text>
+                  </View>
                 </View>
-              ))}
-              <View style={s.quoteBox}>
-                <Text style={s.quoteLabel}>ANALYST QUOTE</Text>
-                <Text style={s.quoteText}>"{selected.q}"</Text>
+                {index < events.length - 1 && <View style={s.divider} />}
               </View>
-              <Text style={s.sectionTitle}>LATEST NEWS</Text>
-              {loadingNews && <Text style={s.dim}>Loading...</Text>}
-              {news.map((item, i) => (
-                <TouchableOpacity key={i} style={s.newsItem} onPress={() => item.url && Linking.openURL(item.url)}>
+            ))}
+          </SurfaceCard>
+        </View>
+      )}
+
+      {topNews.length > 1 && (
+        <View style={s.sectionGap}>
+          <SectionLabel>More headlines</SectionLabel>
+          <SurfaceCard padded={false}>
+            {topNews.slice(1, 7).map((item, index, arr) => (
+              <View key={`${item.headline}-${index}`} style={{ paddingHorizontal: space.md }}>
+                <TouchableOpacity
+                  style={s.newsRow}
+                  onPress={() => openExternalUrl(item.url)}
+                  activeOpacity={0.7}
+                >
                   <Text style={s.newsHeadline}>{item.headline}</Text>
-                  <Text style={s.newsSource}>{item.source} · {item.summary?.slice(0, 80)}...</Text>
+                  <Text style={s.newsMeta}>{item.source}</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-      </Modal>
+                {index < arr.length - 1 && <View style={s.divider} />}
+              </View>
+            ))}
+          </SurfaceCard>
+        </View>
+      )}
     </ScrollView>
   );
 }
-
-function Stat({ label, val }: { label: string; val: string }) {
-  return (
-    <View style={s.stat}>
-      <Text style={s.statLabel}>{label}</Text>
-      <Text style={s.statVal}>{val}</Text>
-    </View>
-  );
-}
-
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bgDark },
-  grid: { padding: 12, gap: 10 },
-  sectionTitle: { fontSize: 10, fontFamily: 'JetBrainsMono_700Bold', color: C.textDim, letterSpacing: 3, marginVertical: 8 },
-  card: { backgroundColor: C.bgCard, borderWidth: 1, borderRadius: 4, padding: 12, gap: 6 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  riskBar: { width: 3, height: 14, borderRadius: 2 },
-  sym: { fontSize: 15, fontFamily: 'JetBrainsMono_700Bold', color: C.textPrimary, flex: 1 },
-  riskBadge: { borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 2 },
-  riskLabel: { fontSize: 8, fontFamily: 'JetBrainsMono_700Bold', letterSpacing: 1 },
-  name: { fontSize: 11, fontFamily: 'JetBrainsMono_400Regular', color: C.textSecondary },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
-  price: { fontSize: 18, fontFamily: 'JetBrainsMono_700Bold' },
-  change: { fontSize: 12, fontFamily: 'JetBrainsMono_400Regular' },
-  statsRow: { flexDirection: 'row', gap: 16, marginTop: 4 },
-  stat: { gap: 2 },
-  statLabel: { fontSize: 8, fontFamily: 'JetBrainsMono_400Regular', color: C.textDim, letterSpacing: 1 },
-  statVal: { fontSize: 11, fontFamily: 'JetBrainsMono_700Bold', color: C.textPrimary },
-  modal: { flex: 1, backgroundColor: C.bgDark, padding: 16 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, paddingTop: 40 },
-  modalSym: { fontSize: 28, fontFamily: 'BebasNeue_400Regular', color: C.textPrimary, letterSpacing: 4 },
-  modalName: { fontSize: 11, fontFamily: 'JetBrainsMono_400Regular', color: C.textSecondary },
-  closeBtn: { borderWidth: 1, borderColor: C.red, padding: 8, borderRadius: 2 },
-  closeText: { fontSize: 10, fontFamily: 'JetBrainsMono_700Bold', color: C.red },
-  signal: { borderLeftWidth: 2, paddingLeft: 10, paddingVertical: 6, marginBottom: 6, backgroundColor: C.bgCard, borderRadius: 2 },
-  signalText: { fontSize: 12, fontFamily: 'JetBrainsMono_400Regular', color: C.textPrimary },
-  quoteBox: { backgroundColor: C.bgPanel, borderLeftWidth: 3, borderLeftColor: C.amber, padding: 12, marginVertical: 12, borderRadius: 2 },
-  quoteLabel: { fontSize: 8, fontFamily: 'JetBrainsMono_700Bold', color: C.amber, letterSpacing: 2, marginBottom: 6 },
-  quoteText: { fontSize: 12, fontFamily: 'JetBrainsMono_400Regular', color: C.textPrimary, lineHeight: 18, fontStyle: 'italic' },
-  newsItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border },
-  newsHeadline: { fontSize: 12, fontFamily: 'JetBrainsMono_700Bold', color: C.textPrimary, marginBottom: 4, lineHeight: 18 },
-  newsSource: { fontSize: 10, fontFamily: 'JetBrainsMono_400Regular', color: C.textSecondary },
-  dim: { fontSize: 11, fontFamily: 'JetBrainsMono_400Regular', color: C.textDim, textAlign: 'center', padding: 20 },
-});

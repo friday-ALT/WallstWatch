@@ -1,20 +1,18 @@
 import nodemailer from 'nodemailer';
 import axios from 'axios';
 import db from '../db/database.js';
-
-const API = 'https://finnhub.io/api/v1';
-const KEY = process.env.FINNHUB_API_KEY ?? '';
+import { getQuote } from './quotes.js';
 
 export async function runAlertEngine() {
-  if (!KEY) return;
   const alerts = db.prepare('SELECT * FROM alerts WHERE active = 1').all() as {
     id: string; user_id: string; symbol: string; type: string; threshold: string;
   }[];
   for (const a of alerts) {
     try {
-      const { data: q } = await axios.get(`${API}/quote`, { params: { symbol: a.symbol, token: KEY } });
-      const price = q.c ?? 0;
-      const pct = q.dp ?? 0;
+      const q = await getQuote(a.symbol);
+      if (!q) continue;
+      const price = q.c;
+      const pct = q.dp;
       const thresh = parseFloat(a.threshold) || 0;
       let fired = false;
       let msg = '';

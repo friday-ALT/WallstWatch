@@ -13,6 +13,8 @@ import { runMigrations } from './db/migrations.js';
 import { startDailyBriefScheduler, sendDailyBrief } from './dailyBrief.js';
 import { seedDemoUser } from './demoUser.js';
 import { runAlertEngine } from './services/alertEngine.js';
+import { getQuote, getQuotes, refreshQuoteCache, getCachedQuotes } from './services/quotes.js';
+import { QUOTE_UNIVERSE } from './services/quoteSymbols.js';
 
 dotenv.config();
 runMigrations();
@@ -46,26 +48,20 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-01-27.acacia' as any })
   : null;
 
-// ── Quotes ────────────────────────────────────────────────────────────────────
+// ── Quotes (Finnhub + Yahoo fallback, shared cache) ───────────────────────────
 app.get('/api/quote/:symbol', async (req, res) => {
   try {
-    const { data } = await fh.get('/quote', { params: { symbol: req.params.symbol.toUpperCase() } });
-    res.json(data);
+    const q = await getQuote(req.params.symbol.toUpperCase());
+    if (!q) return res.status(404).json({ error: 'quote unavailable' });
+    res.json(q);
   } catch { res.status(500).json({ error: 'quote failed' }); }
 });
 
 app.get('/api/quotes', async (req, res) => {
   const symbols = String(req.query.symbols ?? '').split(',').filter(Boolean);
+  if (symbols.length === 0) return res.json({});
   try {
-    const results = await Promise.all(
-      symbols.map(async (s) => {
-        const { data } = await fh.get('/quote', { params: { symbol: s } });
-        return { symbol: s, ...data };
-      })
-    );
-    // Return as Record<symbol, quote> so client can merge cleanly
-    const record: Record<string, unknown> = {};
-    results.forEach(r => { record[r.symbol] = r; });
+    const record = await getQuotes(symbols);
     res.json(record);
   } catch { res.status(500).json({ error: 'batch quotes failed' }); }
 });
@@ -425,28 +421,22 @@ app.post('/api/brief/send-now', authMiddleware as any, async (_req: any, res) =>
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
-const WATCH_SYMBOLS = ['JPM','GS','MS','BAC','C','WFC','DB','UBS','BCS','HSBC','BNP','SCHW','SPY','QQQ','VIX','XLF'];
-let priceCache: Record<string, unknown> = {};
-
 async function refreshPrices() {
-  if (!KEY) return;
   try {
-    const results = await Promise.all(
-      WATCH_SYMBOLS.map(async (s) => {
-        const { data } = await fh.get('/quote', { params: { symbol: s } });
-        return { symbol: s, ...data };
-      })
-    );
-    results.forEach(r => { priceCache[r.symbol] = r; });
+    await refreshQuoteCache(QUOTE_UNIVERSE);
+    const priceCache = getCachedQuotes();
+    if (Object.keys(priceCache).length === 0) return;
     const msg = JSON.stringify({ type: 'prices', data: priceCache });
     wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN) client.send(msg); });
   } catch { /* silent */ }
 }
 
-setInterval(refreshPrices, 8000);
+refreshPrices().catch(() => {});
+setInterval(refreshPrices, 15_000);
 setInterval(() => { runAlertEngine().catch(() => {}); }, 60_000);
 wss.on('connection', (ws) => {
-  if (Object.keys(priceCache).length > 0) ws.send(JSON.stringify({ type: 'prices', data: priceCache }));
+  const cached = getCachedQuotes();
+  if (Object.keys(cached).length > 0) ws.send(JSON.stringify({ type: 'prices', data: cached }));
 });
 
 const PORT = Number(process.env.PORT ?? 3001);

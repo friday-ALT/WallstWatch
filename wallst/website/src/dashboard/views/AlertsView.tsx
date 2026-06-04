@@ -3,6 +3,7 @@ import { Quote } from '../hooks/useLiveQuotes';
 import { fmtPrice } from '../utils/fmt';
 import { Skeleton } from '../components/Skeleton';
 import { UNLOCK_ALL } from '../../config/features';
+import { ALL_SYMBOLS, DEFAULT_ALERTS, SYMBOLS_BY_CATEGORY } from '../data/marketSymbols';
 
 type AlertType = 'PRICE_ABOVE' | 'PRICE_BELOW' | 'PCT_CHANGE' | 'INSIDER_BUY' | 'EARNINGS';
 interface Alert { id: string; sym: string; type: AlertType; threshold: string; active: boolean; triggered?: boolean; }
@@ -15,21 +16,13 @@ const TYPE_LABELS: Record<AlertType, string> = {
   EARNINGS:     'Earnings report filed',
 };
 
-const ALL_SYMS = ['JPM','GS','MS','BAC','C','WFC','AAPL','MSFT','NVDA','SPY','QQQ'];
-
 interface Props { quotes: Record<string, Quote>; token: string | null; }
-
-const DEFAULT_ALERTS: Alert[] = [
-  { id: '1', sym: 'JPM', type: 'PRICE_BELOW', threshold: '$270.00', active: true },
-  { id: '2', sym: 'GS',  type: 'INSIDER_BUY', threshold: '',        active: true },
-  { id: '3', sym: 'SPY', type: 'PCT_CHANGE',  threshold: '2%',      active: false },
-];
 
 export function AlertsView({ quotes, token }: Props) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ sym: 'JPM', type: 'PRICE_BELOW' as AlertType, threshold: '' });
+  const [form, setForm] = useState({ sym: 'SPY', type: 'PCT_CHANGE' as AlertType, threshold: '' });
   const [triggered, setTriggered] = useState<string[]>([]);
 
   const [events, setEvents] = useState<any[]>([]);
@@ -89,7 +82,7 @@ export function AlertsView({ quotes, token }: Props) {
       const newAlert: Alert = { id: Date.now().toString(), sym: form.sym, type: form.type, threshold: form.threshold, active: true };
       save([...alerts, newAlert]);
     }
-    setForm({ sym: 'JPM', type: 'PRICE_BELOW', threshold: '' }); setAdding(false);
+    setForm({ sym: 'SPY', type: 'PCT_CHANGE', threshold: '' }); setAdding(false);
   };
 
   const toggle = (id: string) => save(alerts.map(a => a.id === id ? { ...a, active: !a.active } : a));
@@ -136,30 +129,51 @@ export function AlertsView({ quotes, token }: Props) {
 
       {/* Add form */}
       {adding && (
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--red)', borderRadius: 4, padding: 16, marginBottom: 16, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={{ flex: '0 0 80px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 7, color: 'var(--text-dim)', letterSpacing: 1, marginBottom: 4 }}>SYMBOL</div>
-            <select value={form.sym} onChange={e => setForm(p => ({ ...p, sym: e.target.value }))}
-              style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 3, padding: '8px 6px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text)', outline: 'none' }}>
-              {ALL_SYMS.map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: 1, minWidth: 160 }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 7, color: 'var(--text-dim)', letterSpacing: 1, marginBottom: 4 }}>CONDITION</div>
-            <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value as AlertType }))}
-              style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 3, padding: '8px 6px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text)', outline: 'none' }}>
-              {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </div>
-          {!['INSIDER_BUY','EARNINGS'].includes(form.type) && (
-            <div style={{ flex: '0 0 110px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 7, color: 'var(--text-dim)', letterSpacing: 1, marginBottom: 4 }}>THRESHOLD</div>
-              <input placeholder={form.type === 'PCT_CHANGE' ? '2%' : '$280.00'} value={form.threshold}
-                onChange={e => setForm(p => ({ ...p, threshold: e.target.value }))}
-                style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 3, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }} />
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--red)', borderRadius: 4, padding: 16, marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
+            <div style={{ flex: '0 0 100px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 7, color: 'var(--text-dim)', letterSpacing: 1, marginBottom: 4 }}>SYMBOL</div>
+              <input
+                list="alert-symbols"
+                value={form.sym}
+                onChange={e => setForm(p => ({ ...p, sym: e.target.value.toUpperCase() }))}
+                placeholder="SPY"
+                style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 3, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
+              />
+              <datalist id="alert-symbols">
+                {ALL_SYMBOLS.map(s => <option key={s} value={s} />)}
+              </datalist>
             </div>
-          )}
-          <button onClick={add} style={{ background: 'var(--red)', border: 'none', color: '#fff', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: 1, padding: '9px 14px', borderRadius: 3, cursor: 'pointer' }}>CREATE →</button>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 7, color: 'var(--text-dim)', letterSpacing: 1, marginBottom: 4 }}>CONDITION</div>
+              <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value as AlertType }))}
+                style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 3, padding: '8px 6px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text)', outline: 'none' }}>
+                {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+            {!['INSIDER_BUY','EARNINGS'].includes(form.type) && (
+              <div style={{ flex: '0 0 110px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 7, color: 'var(--text-dim)', letterSpacing: 1, marginBottom: 4 }}>THRESHOLD</div>
+                <input placeholder={form.type === 'PCT_CHANGE' ? '2' : form.sym === 'VIX' ? '22' : '580'}
+                  value={form.threshold}
+                  onChange={e => setForm(p => ({ ...p, threshold: e.target.value }))}
+                  style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 3, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            )}
+            <button onClick={add} style={{ background: 'var(--red)', border: 'none', color: '#fff', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: 1, padding: '9px 14px', borderRadius: 3, cursor: 'pointer' }}>CREATE →</button>
+          </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 7, color: 'var(--text-dim)', letterSpacing: 1, marginBottom: 8 }}>QUICK PICK — INDEXES & BIG MARKET</div>
+          {(['Index', 'Sector', 'Mega cap', 'Bank'] as const).map(cat => (
+            <div key={cat} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--text-dim)', width: 64, paddingTop: 4 }}>{cat.toUpperCase()}</span>
+              {(SYMBOLS_BY_CATEGORY[cat] ?? []).map(s => (
+                <button key={s.sym} type="button" onClick={() => setForm(p => ({ ...p, sym: s.sym }))}
+                  style={{ background: form.sym === s.sym ? 'var(--red)22' : 'var(--bg)', border: `1px solid ${form.sym === s.sym ? 'var(--red)55' : 'var(--border)'}`, color: form.sym === s.sym ? 'var(--red)' : 'var(--text-sec)', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 2, cursor: 'pointer' }}>
+                  {s.sym}
+                </button>
+              ))}
+            </div>
+          ))}
         </div>
       )}
 
