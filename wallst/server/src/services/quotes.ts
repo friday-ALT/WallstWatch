@@ -16,6 +16,10 @@ const FINNHUB_KEY = process.env.FINNHUB_API_KEY ?? '';
 const CACHE_TTL_MS = 15_000;
 const CHUNK_SIZE = 6;
 const CHUNK_DELAY_MS = 120;
+const REQUEST_BUDGET_MS = 10_000;
+
+/** Skip Finnhub for a while after rate-limit errors */
+let finnhubDisabledUntil = 0;
 
 /** Yahoo Finance ticker overrides (Finnhub uses ETF tickers as-is) */
 const YAHOO_SYMBOL: Record<string, string> = {
@@ -35,13 +39,17 @@ function isValid(q: Quote | null | undefined): q is Quote {
 }
 
 async function fetchFinnhub(symbol: string): Promise<Quote | null> {
-  if (!FINNHUB_KEY) return null;
+  if (!FINNHUB_KEY || Date.now() < finnhubDisabledUntil) return null;
   try {
     const { data } = await axios.get('https://finnhub.io/api/v1/quote', {
       params: { symbol, token: FINNHUB_KEY },
-      timeout: 8000,
+      timeout: 5000,
     });
-    if (data?.error) return null;
+    if (data?.error) {
+      const msg = String(data.error).toLowerCase();
+      if (msg.includes('limit')) finnhubDisabledUntil = Date.now() + 3_600_000;
+      return null;
+    }
     if (!data?.c || data.c <= 0) return null;
     return {
       c: data.c,
@@ -103,11 +111,15 @@ async function fetchQuote(symbol: string): Promise<Quote | null> {
   return q;
 }
 
-async function fetchQuotesChunked(symbols: string[]): Promise<Record<string, Quote>> {
+async function fetchQuotesChunked(
+  symbols: string[],
+  deadline = Infinity
+): Promise<Record<string, Quote>> {
   const out: Record<string, Quote> = {};
   const unique = [...new Set(symbols.map((s) => s.toUpperCase()))];
 
   for (let i = 0; i < unique.length; i += CHUNK_SIZE) {
+    if (Date.now() > deadline) break;
     const chunk = unique.slice(i, i + CHUNK_SIZE);
     const settled = await Promise.allSettled(chunk.map((s) => fetchQuote(s)));
     settled.forEach((result, idx) => {
@@ -133,20 +145,26 @@ export async function getQuote(symbol: string): Promise<Quote | null> {
 
 export async function getQuotes(symbols: string[]): Promise<Record<string, Quote>> {
   const unique = [...new Set(symbols.map((s) => s.toUpperCase()))];
-  const freshEnough = Date.now() - lastFullRefresh < CACHE_TTL_MS;
-
   const out: Record<string, Quote> = {};
   const missing: string[] = [];
 
   for (const sym of unique) {
-    if (freshEnough && cache[sym]) out[sym] = cache[sym];
+    if (cache[sym]) out[sym] = cache[sym];
     else missing.push(sym);
   }
 
   if (missing.length === 0) return out;
 
-  const fetched = await fetchQuotesChunked(missing);
-  return { ...out, ...fetched };
+  const deadline = Date.now() + REQUEST_BUDGET_MS;
+  const fetched = await fetchQuotesChunked(missing, deadline);
+  const merged = { ...out, ...fetched };
+
+  const stillMissing = missing.filter((s) => !merged[s]);
+  if (stillMissing.length > 0) {
+    fetchQuotesChunked(stillMissing).catch(() => {});
+  }
+
+  return merged;
 }
 
 export async function refreshQuoteCache(symbols: string[] = QUOTE_UNIVERSE): Promise<Record<string, Quote>> {

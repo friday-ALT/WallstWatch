@@ -13,7 +13,7 @@ import { runMigrations } from './db/migrations.js';
 import { startDailyBriefScheduler, sendDailyBrief } from './dailyBrief.js';
 import { seedDemoUser } from './demoUser.js';
 import { runAlertEngine } from './services/alertEngine.js';
-import { getQuote, getQuotes, refreshQuoteCache, getCachedQuotes } from './services/quotes.js';
+import { getQuote, getQuotes, refreshQuoteCache, getCachedQuotes, type Quote } from './services/quotes.js';
 import { QUOTE_UNIVERSE } from './services/quoteSymbols.js';
 
 dotenv.config();
@@ -63,7 +63,15 @@ app.get('/api/quotes', async (req, res) => {
   try {
     const record = await getQuotes(symbols);
     res.json(record);
-  } catch { res.status(500).json({ error: 'batch quotes failed' }); }
+  } catch {
+    const fallback: Record<string, Quote> = {};
+    const cached = getCachedQuotes();
+    for (const s of symbols) {
+      const sym = s.toUpperCase();
+      if (cached[sym]) fallback[sym] = cached[sym];
+    }
+    res.json(fallback);
+  }
 });
 
 // ── News ──────────────────────────────────────────────────────────────────────
