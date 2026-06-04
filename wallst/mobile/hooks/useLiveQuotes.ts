@@ -48,6 +48,7 @@ async function fetchQuoteChunks(symbols: string[]): Promise<Record<string, Quote
       const data = await apiFetch<Record<string, unknown>>(
         `/quotes?symbols=${encodeURIComponent(chunk.join(','))}`
       );
+      if ('error' in data) continue;
       Object.assign(merged, normalizeQuotes(data));
     } catch {
       /* partial results still useful */
