@@ -1,3 +1,5 @@
+import { AppDownloadSection } from '../components/AppDownloadSection';
+
 const FEATURES = [
   {
     icon: '◆',
@@ -140,6 +142,8 @@ export function Features() {
           </div>
         </div>
       ))}
+
+      <AppDownloadSection />
     </>
   );
 }

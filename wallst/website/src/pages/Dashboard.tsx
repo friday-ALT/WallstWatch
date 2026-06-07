@@ -35,6 +35,7 @@ import { TabNav, Tab } from '../dashboard/components/TabNav';
 import { useAuth } from '../auth/AuthContext';
 import { effectivePlanLabel } from '../config/features';
 import { DASHBOARD_TICKER_SYMS } from '../dashboard/data/marketSymbols';
+import { AppDownloadSection } from '../components/AppDownloadSection';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -150,6 +151,9 @@ export function Dashboard() {
               <span className="dc-rate-val" style={{color:c as string}}>{v as string}</span>
             </div>
           ))}
+          <div className="dc-panel-title" style={{marginTop:20}}>MOBILE APP</div>
+          <AppDownloadSection compact />
+
           <div className="dc-panel-title" style={{marginTop:20}}>QUICK ACCESS</div>
           {[
             ['◆ Daily Brief','brief'],

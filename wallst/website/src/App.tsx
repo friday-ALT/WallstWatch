@@ -2,6 +2,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { TickerBar } from './components/TickerBar';
+import { ProUpgradeBanner } from './components/ProUpgradeBanner';
 import { Landing } from './pages/Landing';
 import { Features } from './pages/Features';
 import { About } from './pages/About';
@@ -12,7 +13,7 @@ import { MarketMap } from './pages/MarketMap';
 import { DailyReport } from './pages/DailyReport';
 import { EquityPage } from './pages/EquityPage';
 
-const FULLSCREEN_ROUTES = ['/dashboard', '/login', '/signup', '/map', '/report'];
+import { MobileAppBanner } from './components/MobileAppBanner';
 
 function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -21,14 +22,23 @@ function MarketingLayout({ children }: { children: React.ReactNode }) {
       <Navbar />
       <main>{children}</main>
       <Footer />
+      <MobileAppBanner />
     </div>
   );
 }
 
 export default function App() {
   const { pathname } = useLocation();
-  const noChrome = FULLSCREEN_ROUTES.includes(pathname);
 
+  return (
+    <>
+      <ProUpgradeBanner />
+      {renderRoutes(pathname)}
+    </>
+  );
+}
+
+function renderRoutes(pathname: string) {
   if (pathname === '/dashboard') return <Dashboard />;
   if (pathname.startsWith('/equity/')) return <EquityPage />;
   if (pathname === '/map')       return <MarketMap />;

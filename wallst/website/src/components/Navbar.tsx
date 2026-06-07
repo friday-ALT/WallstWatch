@@ -23,6 +23,7 @@ export function Navbar() {
         <li><NavLink to="/report" className={({ isActive }) => isActive ? 'active' : ''}>Daily Report</NavLink></li>
         <li><NavLink to="/features" className={({ isActive }) => isActive ? 'active' : ''}>Features</NavLink></li>
         <li><NavLink to="/pricing" className={({ isActive }) => isActive ? 'active' : ''}>Pricing</NavLink></li>
+        <li><NavLink to="/#app-download" className={({ isActive }) => isActive ? 'active' : ''}>App</NavLink></li>
         <li><NavLink to="/about" className={({ isActive }) => isActive ? 'active' : ''}>About</NavLink></li>
       </ul>
 
@@ -72,7 +73,7 @@ export function Navbar() {
           padding: '20px 24px', zIndex: 200,
           display: 'flex', flexDirection: 'column', gap: 16,
         }}>
-          {[['/', 'Overview'], ['/map', 'Market Map'], ['/report', 'Daily Report'], ['/features', 'Features'], ['/pricing', 'Pricing'], ['/about', 'About']].map(([to, label]) => (
+          {[['/', 'Overview'], ['/map', 'Market Map'], ['/report', 'Daily Report'], ['/features', 'Features'], ['/pricing', 'Pricing'], ['/#app-download', 'Mobile App'], ['/about', 'About']].map(([to, label]) => (
             <NavLink key={to} to={to} onClick={() => setOpen(false)}
               style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text-sec)' }}>
               {label}

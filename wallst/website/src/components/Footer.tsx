@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AppStoreBadges } from './AppStoreBadges';
+import { appStoreHref, trackAppClick } from '../config/appDownload';
 
 export function Footer() {
   const [clock, setClock] = useState('');
@@ -19,6 +21,9 @@ export function Footer() {
           <p className="footer-brand-desc">
             Real-time banking intelligence for serious investors. Track the Big 6 and beyond with institutional-grade data.
           </p>
+          <div className="footer-app-badges">
+            <AppStoreBadges surface="footer" size="sm" />
+          </div>
         </div>
         <div>
           <div className="footer-col-title">Product</div>
@@ -26,6 +31,7 @@ export function Footer() {
             <li><Link to="/">Overview</Link></li>
             <li><Link to="/features">Features</Link></li>
             <li><Link to="/about">About</Link></li>
+            <li><Link to="/#app-download">Mobile App</Link></li>
           </ul>
         </div>
         <div>
@@ -38,11 +44,19 @@ export function Footer() {
           </ul>
         </div>
         <div>
-          <div className="footer-col-title">Platform</div>
+          <div className="footer-col-title">Download</div>
           <ul className="footer-links">
-            <li><a href="#">Expo Go (iOS)</a></li>
-            <li><a href="#">Expo Go (Android)</a></li>
-            <li><a href="#">Web App</a></li>
+            <li>
+              <a href={appStoreHref('ios')} onClick={() => trackAppClick('ios', 'footer-link')}>
+                iPhone & iPad
+              </a>
+            </li>
+            <li>
+              <a href={appStoreHref('android')} onClick={() => trackAppClick('android', 'footer-link')}>
+                Android
+              </a>
+            </li>
+            <li><Link to="/dashboard">Web Terminal</Link></li>
           </ul>
         </div>
       </div>

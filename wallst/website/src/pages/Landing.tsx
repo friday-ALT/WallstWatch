@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AppDownloadSection } from '../components/AppDownloadSection';
 
 const RISKS = [
   { sym: 'C',   name: 'Citigroup',       level: 7, label: 'HIGH',     color: '#ff6d00' },
@@ -116,6 +117,9 @@ export function Landing() {
         <div className="hero-ctas">
           <button className="btn-primary" onClick={() => navigate('/map')}>▶ Open Market Map</button>
           <button className="btn-outline" onClick={() => navigate('/pricing')}>View Pricing →</button>
+          <button className="btn-outline" onClick={() => document.getElementById('app-download')?.scrollIntoView({ behavior: 'smooth' })}>
+            📱 Get the App
+          </button>
         </div>
         <div className="hero-stats">
           {[
@@ -395,6 +399,9 @@ export function Landing() {
           )}
         </div>
       </section>
+
+      {/* ── 3.5 MOBILE APP ── */}
+      <AppDownloadSection />
 
       {/* ── 4. PRICING TEASER ── */}
       <section style={{ background: 'var(--bg-panel)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '60px 40px' }}>
