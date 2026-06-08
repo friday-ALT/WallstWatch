@@ -7,6 +7,8 @@ import { AppDownloadPopup } from './components/AppDownloadPopup';
 import { Landing } from './pages/Landing';
 import { Features } from './pages/Features';
 import { About } from './pages/About';
+import { Privacy } from './pages/Privacy';
+import { Terms } from './pages/Terms';
 import { Dashboard } from './pages/Dashboard';
 import { AuthPage } from './pages/AuthPage';
 import { Pricing } from './pages/Pricing';
@@ -51,6 +53,8 @@ function renderRoutes(pathname: string) {
         <Route path="/"        element={<Landing />} />
         <Route path="/features" element={<Features />} />
         <Route path="/about"   element={<About />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms"   element={<Terms />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/map"      element={<MarketMap />} />
         <Route path="/report"   element={<DailyReport />} />

@@ -16,11 +16,13 @@ import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
 import { AppSplash } from '../components/AppSplash';
 import { darkColors } from '../constants/colors';
+import { useNotificationRouting } from '../hooks/useNotificationRouting';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootNavigator() {
   const { isDark, colors } = useTheme();
+  useNotificationRouting();
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.bgDark} />

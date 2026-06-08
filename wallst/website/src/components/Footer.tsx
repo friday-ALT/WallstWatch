@@ -44,6 +44,14 @@ export function Footer() {
           </ul>
         </div>
         <div>
+          <div className="footer-col-title">Legal</div>
+          <ul className="footer-links">
+            <li><Link to="/privacy">Privacy Policy</Link></li>
+            <li><Link to="/terms">Terms of Service</Link></li>
+            <li><a href="mailto:hello@wallstwatch.com">Contact</a></li>
+          </ul>
+        </div>
+        <div>
           <div className="footer-col-title">Download</div>
           <ul className="footer-links">
             <li>

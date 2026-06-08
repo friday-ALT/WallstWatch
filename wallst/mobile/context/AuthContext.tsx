@@ -9,8 +9,10 @@ import {
   type ReactNode,
 } from 'react';
 import { authFetch } from '../constants/api';
+import { getExpoPushToken, pushPlatform } from '../utils/pushNotifications';
 
 const TOKEN_KEY = 'ww_token';
+const PUSH_TOKEN_KEY = 'ww_push_token';
 
 export type PlanTier = 'free' | 'pro' | 'professional' | 'institutional';
 
@@ -23,6 +25,8 @@ export interface User {
   trialDaysLeft?: number;
   trial_ends?: string | null;
   created_at?: string;
+  pushPriceAlerts?: boolean;
+  pushNewsAlerts?: boolean;
 }
 
 export interface WatchlistRow {
@@ -45,6 +49,8 @@ interface AuthCtx {
   addWatchSymbol: (symbol: string) => Promise<WatchlistRow[]>;
   removeWatchSymbol: (symbol: string) => Promise<WatchlistRow[]>;
   planLabel: string;
+  syncPushToken: () => Promise<void>;
+  updateNotificationPrefs: (prefs: { pushPriceAlerts?: boolean; pushNewsAlerts?: boolean }) => Promise<void>;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -65,6 +71,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else await AsyncStorage.removeItem(TOKEN_KEY);
     setToken(t);
   }, []);
+
+  const syncPushToken = useCallback(async () => {
+    if (!token) return;
+    try {
+      const pushToken = await getExpoPushToken();
+      if (!pushToken) return;
+      await authFetch('/push-token', {
+        token,
+        method: 'POST',
+        body: { token: pushToken, platform: pushPlatform() },
+      });
+      await AsyncStorage.setItem(PUSH_TOKEN_KEY, pushToken);
+    } catch {
+      /* permissions denied or simulator */
+    }
+  }, [token]);
+
+  const unregisterPushToken = useCallback(async () => {
+    const pushToken = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
+    if (pushToken && token) {
+      try {
+        await authFetch('/push-token', {
+          token,
+          method: 'DELETE',
+          body: { token: pushToken },
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+    await AsyncStorage.removeItem(PUSH_TOKEN_KEY);
+  }, [token]);
+
+  const updateNotificationPrefs = useCallback(
+    async (prefs: { pushPriceAlerts?: boolean; pushNewsAlerts?: boolean }) => {
+      if (!token) throw new Error('Sign in to manage notifications');
+      const updated = await authFetch<{ pushPriceAlerts: boolean; pushNewsAlerts: boolean }>(
+        '/notifications',
+        { token, method: 'PATCH', body: prefs }
+      );
+      setUser((prev) =>
+        prev
+          ? { ...prev, pushPriceAlerts: updated.pushPriceAlerts, pushNewsAlerts: updated.pushNewsAlerts }
+          : prev
+      );
+    },
+    [token]
+  );
 
   const refreshUser = useCallback(async () => {
     if (!token) {
@@ -97,6 +151,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else setUser(null);
   }, [token, refreshUser]);
 
+  useEffect(() => {
+    if (user && token) void syncPushToken();
+  }, [user?.id, token, syncPushToken]);
+
   const login = useCallback(
     async (email: string, password: string) => {
       const { token: t, user: u } = await authFetch<{ token: string; user: User }>('/login', {
@@ -124,10 +182,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    await unregisterPushToken();
     await persistToken(null);
     setUser(null);
     setLoading(false);
-  }, [persistToken]);
+  }, [persistToken, unregisterPushToken]);
 
   const fetchWatchlist = useCallback(async () => {
     if (!token) return [];
@@ -170,6 +229,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       addWatchSymbol,
       removeWatchSymbol,
       planLabel: planLabelFor(user),
+      syncPushToken,
+      updateNotificationPrefs,
     }),
     [
       user,
@@ -182,6 +243,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fetchWatchlist,
       addWatchSymbol,
       removeWatchSymbol,
+      syncPushToken,
+      updateNotificationPrefs,
     ]
   );
 

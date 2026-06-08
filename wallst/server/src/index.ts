@@ -13,6 +13,7 @@ import { runMigrations } from './db/migrations.js';
 import { startDailyBriefScheduler, sendDailyBrief } from './dailyBrief.js';
 import { seedDemoUser } from './demoUser.js';
 import { runAlertEngine } from './services/alertEngine.js';
+import { runNewsAlertEngine } from './services/newsAlertEngine.js';
 import { getQuote, getQuotes, refreshQuoteCache, getCachedQuotes, type Quote } from './services/quotes.js';
 import { QUOTE_UNIVERSE } from './services/quoteSymbols.js';
 
@@ -442,6 +443,8 @@ async function refreshPrices() {
 refreshPrices().catch(() => {});
 setInterval(refreshPrices, 15_000);
 setInterval(() => { runAlertEngine().catch(() => {}); }, 60_000);
+setInterval(() => { runNewsAlertEngine().catch(() => {}); }, 5 * 60_000);
+runNewsAlertEngine().catch(() => {});
 wss.on('connection', (ws) => {
   const cached = getCachedQuotes();
   if (Object.keys(cached).length > 0) ws.send(JSON.stringify({ type: 'prices', data: cached }));

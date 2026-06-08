@@ -67,4 +67,25 @@ export function runMigrations() {
   `);
   try { db.exec(`ALTER TABLE alerts ADD COLUMN channel TEXT DEFAULT 'in_app'`); } catch { /* exists */ }
   try { db.exec(`ALTER TABLE alerts ADD COLUMN last_fired TEXT`); } catch { /* exists */ }
+  try { db.exec(`ALTER TABLE users ADD COLUMN push_price_alerts INTEGER NOT NULL DEFAULT 1`); } catch { /* exists */ }
+  try { db.exec(`ALTER TABLE users ADD COLUMN push_news_alerts INTEGER NOT NULL DEFAULT 1`); } catch { /* exists */ }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS push_tokens (
+      id         TEXT PRIMARY KEY,
+      user_id    TEXT NOT NULL,
+      token      TEXT NOT NULL UNIQUE,
+      platform   TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS news_push_sent (
+      id            TEXT PRIMARY KEY,
+      user_id       TEXT NOT NULL,
+      headline_hash TEXT NOT NULL,
+      created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_news_push_user ON news_push_sent (user_id, headline_hash);
+    CREATE INDEX IF NOT EXISTS idx_push_tokens_user ON push_tokens (user_id);
+  `);
 }

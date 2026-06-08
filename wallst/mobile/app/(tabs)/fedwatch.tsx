@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { apiFetch } from '../../constants/api';
 import { useAuth } from '../../context/AuthContext';
@@ -66,12 +66,22 @@ function initials(name: string) {
 
 export default function AccountScreen() {
   const router = useRouter();
-  const { user, loading: authLoading, logout, planLabel } = useAuth();
+  const { user, loading: authLoading, logout, planLabel, updateNotificationPrefs, syncPushToken } = useAuth();
   const colors = useColors();
   const s = useThemedStyles(makeStyles);
   const screenPad = useScreenPad({ gap: space.lg });
   const [apiUp, setApiUp] = useState<boolean | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [newsPush, setNewsPush] = useState(true);
+  const [pricePush, setPricePush] = useState(true);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setNewsPush(user.pushNewsAlerts !== false);
+      setPricePush(user.pushPriceAlerts !== false);
+    }
+  }, [user]);
 
   useEffect(() => {
     apiFetch('/health')
@@ -85,6 +95,32 @@ export default function AccountScreen() {
       await logout();
     } finally {
       setLoggingOut(false);
+    }
+  };
+
+  const toggleNewsPush = async (value: boolean) => {
+    setNewsPush(value);
+    setSavingPrefs(true);
+    try {
+      await updateNotificationPrefs({ pushNewsAlerts: value });
+      if (value) await syncPushToken();
+    } catch {
+      setNewsPush(!value);
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
+  const togglePricePush = async (value: boolean) => {
+    setPricePush(value);
+    setSavingPrefs(true);
+    try {
+      await updateNotificationPrefs({ pushPriceAlerts: value });
+      if (value) await syncPushToken();
+    } catch {
+      setPricePush(!value);
+    } finally {
+      setSavingPrefs(false);
     }
   };
 
@@ -120,6 +156,47 @@ export default function AccountScreen() {
 
       {user ? (
         <View style={s.sectionGap}>
+          <SectionLabel subtitle="Lock-screen alerts for news and price moves">Notifications</SectionLabel>
+          <SurfaceCard padded={false}>
+            <View style={{ paddingHorizontal: space.md, paddingVertical: space.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }}>
+                <View style={{ flex: 1, paddingRight: space.md }}>
+                  <Text style={{ fontFamily: F.sans.semibold, fontSize: 16, color: colors.textPrimary }}>Breaking news</Text>
+                  <Text style={{ fontFamily: F.sans.regular, fontSize: 13, color: colors.textDim, marginTop: 4 }}>
+                    Market headlines and watchlist news on your lock screen
+                  </Text>
+                </View>
+                <Switch
+                  value={newsPush}
+                  onValueChange={toggleNewsPush}
+                  disabled={savingPrefs}
+                  trackColor={{ false: colors.bgCard, true: colors.red + '88' }}
+                  thumbColor={newsPush ? colors.red : colors.textDim}
+                />
+              </View>
+              <View style={{ height: 1, backgroundColor: colors.border + '55' }} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }}>
+                <View style={{ flex: 1, paddingRight: space.md }}>
+                  <Text style={{ fontFamily: F.sans.semibold, fontSize: 16, color: colors.textPrimary }}>Price alerts</Text>
+                  <Text style={{ fontFamily: F.sans.regular, fontSize: 13, color: colors.textDim, marginTop: 4 }}>
+                    Push when your alert rules fire
+                  </Text>
+                </View>
+                <Switch
+                  value={pricePush}
+                  onValueChange={togglePricePush}
+                  disabled={savingPrefs}
+                  trackColor={{ false: colors.bgCard, true: colors.red + '88' }}
+                  thumbColor={pricePush ? colors.red : colors.textDim}
+                />
+              </View>
+            </View>
+          </SurfaceCard>
+        </View>
+      ) : null}
+
+      {user ? (
+        <View style={s.sectionGap}>
           <SurfaceCard padded={false}>
             <View style={{ paddingHorizontal: space.md }}>
               <ListRow
@@ -131,6 +208,16 @@ export default function AccountScreen() {
                 label="Web dashboard"
                 icon="laptop-outline"
                 onPress={() => openExternalUrl('https://wallst-watch.vercel.app/dashboard')}
+              />
+              <ListRow
+                label="Privacy policy"
+                icon="shield-outline"
+                onPress={() => openExternalUrl('https://wallst-watch.vercel.app/privacy')}
+              />
+              <ListRow
+                label="Terms of service"
+                icon="document-text-outline"
+                onPress={() => openExternalUrl('https://wallst-watch.vercel.app/terms')}
               />
               <ListRow
                 label="Market map"

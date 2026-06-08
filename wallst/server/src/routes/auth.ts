@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import db from '../db/database.js';
+import { registerPushToken, removePushToken } from '../services/pushNotifications.js';
 
 const SIGNUP_WATCHLIST = ['SPY', 'QQQ', 'JPM', 'GS', 'NVDA', 'XLF'];
 
@@ -13,6 +14,7 @@ const TRIAL_DAYS = 14;
 interface DBUser {
   id: string; email: string; password_hash: string; name: string;
   plan: string; trial_ends: string | null; created_at: string;
+  push_price_alerts?: number; push_news_alerts?: number;
 }
 
 function makeToken(user: DBUser) {
@@ -31,7 +33,14 @@ function safeUser(user: DBUser) {
     ? Math.ceil((new Date(user.trial_ends!).getTime() - Date.now()) / 86400000)
     : 0;
   const { password_hash, ...safe } = user;
-  return { ...safe, plan, trialActive, trialDaysLeft };
+  return {
+    ...safe,
+    plan,
+    trialActive,
+    trialDaysLeft,
+    pushPriceAlerts: (user.push_price_alerts ?? 1) === 1,
+    pushNewsAlerts: (user.push_news_alerts ?? 1) === 1,
+  };
 }
 
 async function sendWelcomeEmail(to: string, name: string) {
@@ -171,6 +180,53 @@ router.patch('/alerts/:id', authMiddleware, (req: any, res: Response) => {
 router.delete('/alerts/:id', authMiddleware, (req: any, res: Response) => {
   db.prepare('DELETE FROM alerts WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
   res.json(db.prepare('SELECT * FROM alerts WHERE user_id = ?').all(req.user.id));
+});
+
+// Push notifications
+router.get('/notifications', authMiddleware, (req: any, res: Response) => {
+  const user = db.prepare('SELECT push_price_alerts, push_news_alerts FROM users WHERE id = ?').get(req.user.id) as
+    | { push_price_alerts: number; push_news_alerts: number }
+    | undefined;
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json({
+    pushPriceAlerts: user.push_price_alerts === 1,
+    pushNewsAlerts: user.push_news_alerts === 1,
+  });
+});
+
+router.patch('/notifications', authMiddleware, (req: any, res: Response) => {
+  const { pushPriceAlerts, pushNewsAlerts } = req.body as {
+    pushPriceAlerts?: boolean;
+    pushNewsAlerts?: boolean;
+  };
+  if (typeof pushPriceAlerts === 'boolean') {
+    db.prepare('UPDATE users SET push_price_alerts = ? WHERE id = ?')
+      .run(pushPriceAlerts ? 1 : 0, req.user.id);
+  }
+  if (typeof pushNewsAlerts === 'boolean') {
+    db.prepare('UPDATE users SET push_news_alerts = ? WHERE id = ?')
+      .run(pushNewsAlerts ? 1 : 0, req.user.id);
+  }
+  const user = db.prepare('SELECT push_price_alerts, push_news_alerts FROM users WHERE id = ?').get(req.user.id) as
+    { push_price_alerts: number; push_news_alerts: number };
+  res.json({
+    pushPriceAlerts: user.push_price_alerts === 1,
+    pushNewsAlerts: user.push_news_alerts === 1,
+  });
+});
+
+router.post('/push-token', authMiddleware, (req: any, res: Response) => {
+  const { token, platform } = req.body as { token?: string; platform?: string };
+  if (!token || !platform) return res.status(400).json({ error: 'token and platform required' });
+  registerPushToken(req.user.id, token, platform);
+  res.json({ ok: true });
+});
+
+router.delete('/push-token', authMiddleware, (req: any, res: Response) => {
+  const { token } = req.body as { token?: string };
+  if (!token) return res.status(400).json({ error: 'token required' });
+  removePushToken(req.user.id, token);
+  res.json({ ok: true });
 });
 
 // Analytics

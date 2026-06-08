@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import axios from 'axios';
 import db from '../db/database.js';
 import { getQuote } from './quotes.js';
+import { sendPushToUser } from './pushNotifications.js';
 
 export async function runAlertEngine() {
   const alerts = db.prepare('SELECT * FROM alerts WHERE active = 1').all() as {
@@ -30,6 +31,11 @@ export async function runAlertEngine() {
       db.prepare(`UPDATE alerts SET last_fired = datetime('now') WHERE id = ?`).run(a.id);
       const user = db.prepare('SELECT email, name FROM users WHERE id = ?').get(a.user_id) as { email: string; name: string } | undefined;
       if (user) await sendAlertEmail(user.email, user.name, msg);
+      await sendPushToUser(a.user_id, 'price', {
+        title: `◆ ${a.symbol} Alert`,
+        body: msg,
+        data: { type: 'price_alert', symbol: a.symbol, alertId: a.id },
+      });
       const hook = db.prepare('SELECT url FROM slack_webhooks WHERE user_id = ?').get(a.user_id) as { url: string } | undefined;
       if (hook?.url) await postSlack(hook.url, msg);
     } catch { /* skip */ }
