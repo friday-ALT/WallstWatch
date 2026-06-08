@@ -3,6 +3,7 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { TickerBar } from './components/TickerBar';
 import { ProUpgradeBanner } from './components/ProUpgradeBanner';
+import { AppDownloadPopup } from './components/AppDownloadPopup';
 import { Landing } from './pages/Landing';
 import { Features } from './pages/Features';
 import { About } from './pages/About';
@@ -13,8 +14,6 @@ import { MarketMap } from './pages/MarketMap';
 import { DailyReport } from './pages/DailyReport';
 import { EquityPage } from './pages/EquityPage';
 
-import { MobileAppBanner } from './components/MobileAppBanner';
-
 function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="app">
@@ -22,7 +21,6 @@ function MarketingLayout({ children }: { children: React.ReactNode }) {
       <Navbar />
       <main>{children}</main>
       <Footer />
-      <MobileAppBanner />
     </div>
   );
 }
@@ -32,6 +30,7 @@ export default function App() {
 
   return (
     <>
+      <AppDownloadPopup />
       <ProUpgradeBanner />
       {renderRoutes(pathname)}
     </>

@@ -1,12 +1,7 @@
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
-
-const NAV = [
-  { path: '/map', label: 'MARKET MAP' },
-  { path: '/report', label: 'DAILY REPORT' },
-  { path: '/dashboard', label: 'DASHBOARD' },
-  { path: '/pricing', label: 'PRICING' },
-];
+import { TerminalNav } from '../../components/TerminalNav';
+import { useLeaveTerminal } from '../../terminal/LeaveTerminalContext';
 
 interface Props {
   utc: string;
@@ -15,48 +10,41 @@ interface Props {
 
 export function MapHeader({ utc, bankCount }: Props) {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   const { user } = useAuth();
+  const { goWorkspace } = useLeaveTerminal();
 
   return (
-    <header className="mm-header">
-      <div className="mm-header-left">
-        <div className="mm-logo" onClick={() => navigate('/')}>
-          <span className="mm-logo-main">WALLST </span>
-          <span className="mm-logo-accent">WATCH</span>
+    <header className="mm-header mm-header--workspace">
+      <div className="mm-header-top">
+        <div className="mm-header-left">
+          <div className="mm-logo" onClick={() => goWorkspace('/dashboard')} role="button" tabIndex={0}>
+            <span className="mm-logo-main">WALLST </span>
+            <span className="mm-logo-accent">WATCH</span>
+          </div>
+          <span className="mm-workspace-badge">WORKSPACE</span>
         </div>
-        <nav className="mm-nav">
-          {NAV.map(n => (
-            <button
-              key={n.path}
-              className={`mm-nav-tab${pathname === n.path ? ' active' : ''}`}
-              onClick={() => navigate(n.path)}
-            >
-              {n.label}
+        <div className="mm-header-right">
+          <span className="mm-stat-badge amber">{bankCount} COMPANIES</span>
+          <span className="mm-stat-badge red">REGIME: ELEVATED</span>
+          <div className="mm-live-badge">
+            <div className="mm-live-dot" />
+            <span>LIVE — {utc} UTC</span>
+          </div>
+          {user ? (
+            <button className="mm-btn-ghost" onClick={() => goWorkspace('/dashboard')}>
+              {user.name.split(' ')[0].toUpperCase()}
             </button>
-          ))}
-        </nav>
-      </div>
-      <div className="mm-header-right">
-        <span className="mm-stat-badge amber">{bankCount} COMPANIES</span>
-        <span className="mm-stat-badge red">REGIME: ELEVATED</span>
-        <div className="mm-live-badge">
-          <div className="mm-live-dot" />
-          <span>LIVE — {utc} UTC</span>
+          ) : (
+            <button className="mm-btn-ghost" onClick={() => navigate('/login')}>
+              LOGIN
+            </button>
+          )}
+          <button className="mm-btn-join" onClick={() => goWorkspace('/dashboard')}>
+            {user ? 'TERMINAL' : 'OPEN TERMINAL'}
+          </button>
         </div>
-        {user ? (
-          <button className="mm-btn-ghost" onClick={() => navigate('/dashboard')}>
-            {user.name.split(' ')[0].toUpperCase()}
-          </button>
-        ) : (
-          <button className="mm-btn-ghost" onClick={() => navigate('/login')}>
-            LOGIN
-          </button>
-        )}
-        <button className="mm-btn-join" onClick={() => navigate(user ? '/dashboard' : '/signup')}>
-          {user ? 'TERMINAL' : 'JOIN FREE'}
-        </button>
       </div>
+      <TerminalNav variant="map" />
     </header>
   );
 }

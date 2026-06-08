@@ -6,6 +6,8 @@ import { CommandBarV2 } from '../terminal/CommandBarV2';
 import { useLiveQuotes } from '../dashboard/hooks/useLiveQuotes';
 import { ProGate } from '../dashboard/components/ProGate';
 import { useAuth } from '../auth/AuthContext';
+import { TerminalNav } from '../components/TerminalNav';
+import { useLeaveTerminal } from '../terminal/LeaveTerminalContext';
 import '../styles/dashboard.css';
 
 export function EquityPage() {
@@ -13,6 +15,7 @@ export function EquityPage() {
   const sym = (paramSym ?? 'JPM').toUpperCase();
   const navigate = useNavigate();
   const { setSymbol, goDashboard } = useTerminal();
+  const { goWorkspace } = useLeaveTerminal();
   const { token } = useAuth();
   const quotes = useLiveQuotes([sym]);
   const [data, setData] = useState<any>(null);
@@ -44,15 +47,17 @@ export function EquityPage() {
     <div className="dc-root">
       <header className="dc-header">
         <div className="dc-header-left">
-          <button type="button" className="dc-back-btn" onClick={() => navigate('/dashboard')}>◆ TERMINAL</button>
-          <button type="button" className="dc-back-btn" onClick={() => navigate('/map')}>MAP</button>
+          <button type="button" className="dc-back-btn" onClick={() => goWorkspace('/dashboard')}>◆ TERMINAL</button>
+          <button type="button" className="dc-back-btn" onClick={() => goWorkspace('/map')}>MAP</button>
           <span className="dc-logo">{sym} US EQUITY</span>
         </div>
         <div className="dc-header-right">
-          <CommandBarV2 onTab={t => goDashboard(t)} onMap={() => navigate('/map')} />
+          <CommandBarV2 onTab={t => goDashboard(t)} onMap={() => goWorkspace('/map')} />
           <span className="dc-clock">{data?.delayNote}</span>
         </div>
       </header>
+
+      <TerminalNav variant="dashboard" equitySymbol={sym} />
 
       <div className="dc-equity-body">
         {loading ? <div className="dc-loading">Loading security data…</div> : (

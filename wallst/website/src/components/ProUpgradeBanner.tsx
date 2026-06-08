@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { hasPlanAccess, UNLOCK_ALL } from '../config/features';
 
-const DELAY_MS = 10_000;
+const DELAY_MS = 45_000;
 const DISMISS_KEY = 'ww_pro_banner_dismissed_until';
 const DISMISS_DAYS = 3;
 const SKIP_PATHS = ['/pricing', '/signup', '/login'];
@@ -26,6 +26,7 @@ export function ProUpgradeBanner() {
   useEffect(() => {
     if (UNLOCK_ALL || loading) return;
     if (SKIP_PATHS.includes(pathname)) return;
+    if (pathname === '/map' || pathname === '/dashboard' || pathname === '/report' || pathname.startsWith('/equity/')) return;
 
     const trialActive = (user as { trialActive?: boolean } | null)?.trialActive ?? false;
     if (hasPlanAccess(user?.plan, 'pro', trialActive)) return;

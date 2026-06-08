@@ -36,11 +36,14 @@ import { useAuth } from '../auth/AuthContext';
 import { effectivePlanLabel } from '../config/features';
 import { DASHBOARD_TICKER_SYMS } from '../dashboard/data/marketSymbols';
 import { AppDownloadSection } from '../components/AppDownloadSection';
+import { TerminalNav } from '../components/TerminalNav';
+import { useLeaveTerminal } from '../terminal/LeaveTerminalContext';
 
 export function Dashboard() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { goEquity, goMap, symbol } = useTerminal();
+  const { goEquity, symbol } = useTerminal();
+  const { goWorkspace } = useLeaveTerminal();
   const { user, token } = useAuth();
   const planLabel = effectivePlanLabel(user?.plan, (user as { trialActive?: boolean } | null)?.trialActive);
   const [tab, setTab] = useState<Tab>((searchParams.get('tab') as Tab) || 'brief');
@@ -89,9 +92,8 @@ export function Dashboard() {
       {/* ── Header ── */}
       <header className="dc-header">
         <div className="dc-header-left">
-          <button type="button" className="dc-back-btn" onClick={() => goMap()}>◆ MAP</button>
+          <button type="button" className="dc-back-btn" onClick={() => goWorkspace('/map')}>◆ MAP</button>
           <button type="button" className="dc-back-btn" onClick={() => goEquity(symbol)}>◎ {symbol}</button>
-          <button type="button" className="dc-back-btn" onClick={() => navigate('/')}>← HOME</button>
           <span className="dc-logo">◆ WALLST WATCH</span>
           <span className="dc-header-badge">COMMAND CENTER</span>
         </div>
@@ -108,7 +110,7 @@ export function Dashboard() {
           })}
         </div>
         <div className="dc-header-right">
-          <CommandBarV2 onTab={t => setTabRoute(t as Tab)} onMap={goMap} />
+          <CommandBarV2 onTab={t => setTabRoute(t as Tab)} onMap={() => goWorkspace('/map')} />
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 8, borderLeft: '1px solid var(--border)' }}>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-sec)' }}>{user.name}</span>
@@ -122,9 +124,11 @@ export function Dashboard() {
         </div>
       </header>
 
+      <TerminalNav variant="dashboard" equitySymbol={symbol} />
+
       {/* ── Grouped Tab Nav ── */}
       <TabNav active={tab} onChange={setTabRoute} />
-      <KeyboardShortcuts onTab={t => setTabRoute(t as Tab)} onMap={goMap} onEquity={() => goEquity(symbol)} />
+      <KeyboardShortcuts onTab={t => setTabRoute(t as Tab)} onMap={() => goWorkspace('/map')} onEquity={() => goEquity(symbol)} />
 
       {/* ── Body ── */}
       <div className="dc-body">

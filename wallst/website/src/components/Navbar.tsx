@@ -20,15 +20,14 @@ export function Navbar() {
       <ul className="navbar-links">
         <li><NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>Overview</NavLink></li>
         <li><NavLink to="/map" className={({ isActive }) => isActive ? 'active' : ''}>Market Map</NavLink></li>
+        <li><NavLink to="/dashboard" className={({ isActive }) => isActive ? 'active' : ''}>Terminal</NavLink></li>
         <li><NavLink to="/report" className={({ isActive }) => isActive ? 'active' : ''}>Daily Report</NavLink></li>
         <li><NavLink to="/features" className={({ isActive }) => isActive ? 'active' : ''}>Features</NavLink></li>
         <li><NavLink to="/pricing" className={({ isActive }) => isActive ? 'active' : ''}>Pricing</NavLink></li>
         <li><NavLink to="/#app-download" className={({ isActive }) => isActive ? 'active' : ''}>App</NavLink></li>
-        <li><NavLink to="/about" className={({ isActive }) => isActive ? 'active' : ''}>About</NavLink></li>
       </ul>
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        {/* Theme toggle */}
         <button
           onClick={toggleTheme}
           title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -59,6 +58,9 @@ export function Navbar() {
         ) : (
           <button className="btn-outline" onClick={() => navigate('/login')} style={{ padding: '7px 14px' }}>Sign In</button>
         )}
+        <button className="btn-outline" onClick={() => navigate('/dashboard')} style={{ padding: '7px 14px' }}>
+          Open Terminal
+        </button>
         <button className="btn-primary" onClick={() => navigate('/map')}>Launch Map</button>
       </div>
 
@@ -73,7 +75,7 @@ export function Navbar() {
           padding: '20px 24px', zIndex: 200,
           display: 'flex', flexDirection: 'column', gap: 16,
         }}>
-          {[['/', 'Overview'], ['/map', 'Market Map'], ['/report', 'Daily Report'], ['/features', 'Features'], ['/pricing', 'Pricing'], ['/#app-download', 'Mobile App'], ['/about', 'About']].map(([to, label]) => (
+          {[['/', 'Overview'], ['/map', 'Market Map'], ['/dashboard', 'Terminal'], ['/report', 'Daily Report'], ['/features', 'Features'], ['/pricing', 'Pricing'], ['/#app-download', 'Mobile App']].map(([to, label]) => (
             <NavLink key={to} to={to} onClick={() => setOpen(false)}
               style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text-sec)' }}>
               {label}
