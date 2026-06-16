@@ -5,6 +5,7 @@ import { authMiddleware } from './auth.js';
 import db from '../db/database.js';
 import { DEALS_FEED } from '../data/dealsFeed.js';
 import { BANKING_REGULATORY, RegulatoryItem } from '../data/bankingRegulatory.js';
+import { getFxMatrix, getFixedIncomeBoard } from '../services/marketData.js';
 
 const router = Router();
 const API = 'https://finnhub.io/api/v1';
@@ -24,42 +25,17 @@ router.get('/banking/regulatory', (req, res) => {
 });
 
 // ── FX matrix (P1) ────────────────────────────────────────────────────────────
-const FX_PAIRS = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'AUD/USD', 'USD/CAD', 'NZD/USD', 'USD/CNH'];
-const FX_SYMBOLS: Record<string, string> = {
-  'EUR/USD': 'EURUSD', 'GBP/USD': 'GBPUSD', 'USD/JPY': 'USDJPY', 'USD/CHF': 'USDCHF',
-  'AUD/USD': 'AUDUSD', 'USD/CAD': 'USDCAD', 'NZD/USD': 'NZDUSD', 'USD/CNH': 'USDCNH',
-};
 router.get('/fx/matrix', async (_req, res) => {
   try {
-    const rows = await Promise.all(
-      Object.entries(FX_SYMBOLS).map(async ([pair, sym]) => {
-        try {
-          const { data } = await fh.get('/quote', { params: { symbol: `OANDA:${sym}` } });
-          return { pair, symbol: sym, price: data.c, change: data.dp, high: data.h, low: data.l };
-        } catch {
-          return { pair, symbol: sym, price: null, change: null, high: null, low: null };
-        }
-      })
-    );
-    res.json(rows);
+    const rows = await getFxMatrix();
+    res.json({ data: rows, delayNote: 'Delayed · 15 min', updatedAt: new Date().toISOString() });
   } catch { res.status(500).json({ error: 'fx matrix failed' }); }
 });
 
-// ── Fixed income lite — FRED-style via Finnhub bonds (P1) ─────────────────────
 router.get('/fixed-income', async (_req, res) => {
-  const TENORS = [
-    { label: '2Y', sym: 'US2Y' }, { label: '5Y', sym: 'US5Y' }, { label: '10Y', sym: 'US10Y' },
-    { label: '30Y', sym: 'US30Y' }, { label: 'HYG', sym: 'HYG' }, { label: 'LQD', sym: 'LQD' },
-    { label: 'TLT', sym: 'TLT' }, { label: 'TIP', sym: 'TIP' },
-  ];
   try {
-    const rows = await Promise.all(TENORS.map(async t => {
-      try {
-        const { data } = await fh.get('/quote', { params: { symbol: t.sym } });
-        return { ...t, price: data.c, change: data.dp };
-      } catch { return { ...t, price: null, change: null }; }
-    }));
-    res.json(rows);
+    const rows = await getFixedIncomeBoard();
+    res.json({ data: rows, delayNote: 'Delayed · 15 min', updatedAt: new Date().toISOString() });
   } catch { res.status(500).json({ error: 'fixed income failed' }); }
 });
 

@@ -24,9 +24,28 @@ let finnhubDisabledUntil = 0;
 /** Yahoo Finance ticker overrides (Finnhub uses ETF tickers as-is) */
 const YAHOO_SYMBOL: Record<string, string> = {
   VIX: '^VIX',
+  US3MY: '^IRX',
+  US06MY: '^IRX',
+  US1Y: '^IRX',
+  US2Y: '^UST2Y',
+  US5Y: '^FVX',
+  US10Y: '^TNX',
+  US20Y: '^TYX',
+  US30Y: '^TYX',
+  DXY: 'DX-Y.NYB',
+  EURUSD: 'EURUSD=X',
+  GBPUSD: 'GBPUSD=X',
+  USDJPY: 'USDJPY=X',
+  USDCHF: 'USDCHF=X',
+  AUDUSD: 'AUDUSD=X',
+  USDCAD: 'CADUSD=X',
+  NZDUSD: 'NZDUSD=X',
+  USDCNH: 'CNY=X',
+  GC: 'GC=F',
+  CL: 'CL=F',
 };
 
-let cache: Record<string, Quote> = {};
+const cache: Record<string, Quote> = {};
 let lastFullRefresh = 0;
 let refreshInFlight: Promise<void> | null = null;
 

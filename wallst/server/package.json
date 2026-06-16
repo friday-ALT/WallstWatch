@@ -6,7 +6,10 @@
     "dev": "nodemon --exec npm run start:dev",
     "start": "node dist/index.js",
     "start:dev": "tsx src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "lint": "eslint src --max-warnings 20",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.2",
@@ -24,6 +27,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.22.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
@@ -32,8 +36,11 @@
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^8.0.0",
     "@types/ws": "^8.5.13",
+    "eslint": "^9.22.0",
+    "globals": "^16.0.0",
     "nodemon": "^3.1.9",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.26.0"
   }
 }

@@ -12,10 +12,20 @@ import db from './db/database.js';
 import { runMigrations } from './db/migrations.js';
 import { startDailyBriefScheduler, sendDailyBrief } from './dailyBrief.js';
 import { seedDemoUser } from './demoUser.js';
+import { seedReviewUser } from './reviewUser.js';
 import { runAlertEngine } from './services/alertEngine.js';
 import { runNewsAlertEngine } from './services/newsAlertEngine.js';
 import { getQuote, getQuotes, refreshQuoteCache, getCachedQuotes, type Quote } from './services/quotes.js';
 import { QUOTE_UNIVERSE } from './services/quoteSymbols.js';
+import { config } from './config/index.js';
+import statusRouter from './routes/status.js';
+import {
+  getSectorQuotes,
+  getYieldCurve,
+  getMarketBreadth,
+  getMacroRates,
+} from './services/marketData.js';
+import { requirePlan } from './middleware/planGate.js';
 
 dotenv.config();
 runMigrations();
@@ -34,8 +44,10 @@ app.get('/', (_req, res) => {
   });
 });
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, service: 'wallst-watch-api' });
+  res.json({ ok: true, service: 'wallst-watch-api', timestamp: new Date().toISOString() });
 });
+
+app.use('/api/status', statusRouter);
 
 app.use('/api/auth', authRouter);
 app.use('/api/platform', platformRouter);
@@ -129,7 +141,7 @@ app.get('/api/candles/:symbol', async (req, res) => {
 });
 
 // ── Earnings Calendar ─────────────────────────────────────────────────────────
-app.get('/api/earnings', async (req, res) => {
+app.get('/api/earnings', requirePlan('pro'), async (req, res) => {
   const from = String(req.query.from ?? new Date().toISOString().split('T')[0]);
   const to   = String(req.query.to   ?? new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
   try {
@@ -147,7 +159,7 @@ app.get('/api/earnings/history/:symbol', async (req, res) => {
 });
 
 // ── Insider Transactions ──────────────────────────────────────────────────────
-app.get('/api/insider/:symbol', async (req, res) => {
+app.get('/api/insider/:symbol', requirePlan('pro'), async (req, res) => {
   try {
     const { data } = await fh.get('/stock/insider-transactions', { params: { symbol: req.params.symbol.toUpperCase() } });
     res.json((data.data ?? []).slice(0, 30));
@@ -239,7 +251,7 @@ app.get('/api/screener', async (req, res) => {
 });
 
 // ── AI Research (Claude) ──────────────────────────────────────────────────────
-app.post('/api/ai/research', authMiddleware as any, async (req: any, res) => {
+app.post('/api/ai/research', authMiddleware as any, requirePlan('professional'), async (req: any, res) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(503).json({ error: 'AI service not configured. Add ANTHROPIC_API_KEY to .env' });
   }
@@ -308,31 +320,89 @@ Be specific, quantitative where possible, and write in the voice of a Goldman Sa
   }
 });
 
-// ── Yield Curve ───────────────────────────────────────────────────────────────
-// Real rates from FRED via Finnhub economic calendar + static recent values
+// ── Yield Curve (Yahoo/Finnhub via shared quote service) ─────────────────────
 app.get('/api/yield-curve', async (_req, res) => {
-  const TENORS = [
-    { label: '3M', symbol: 'US03MY' },
-    { label: '6M', symbol: 'US06MY' },
-    { label: '1Y', symbol: 'US1Y'   },
-    { label: '2Y', symbol: 'US2Y'   },
-    { label: '5Y', symbol: 'US5Y'   },
-    { label: '10Y', symbol: 'US10Y' },
-    { label: '20Y', symbol: 'US20Y' },
-    { label: '30Y', symbol: 'US30Y' },
-  ];
   try {
-    const results = await Promise.all(TENORS.map(async (t) => {
-      try {
-        const { data } = await fh.get('/quote', { params: { symbol: t.symbol } });
-        return { ...t, yield: data.c ?? null, prevYield: data.pc ?? null };
-      } catch { return { ...t, yield: null, prevYield: null }; }
-    }));
-    res.json(results);
+    const results = await getYieldCurve();
+    res.json({ data: results, delayNote: 'Delayed · 15 min', updatedAt: new Date().toISOString() });
   } catch { res.status(500).json({ error: 'yield curve failed' }); }
 });
 
-// ── Correlation data (candles for multiple symbols) ───────────────────────────
+// ── Market breadth (sector ETF proxies) ───────────────────────────────────────
+app.get('/api/breadth', async (_req, res) => {
+  try {
+    res.json(await getMarketBreadth());
+  } catch { res.status(500).json({ error: 'breadth failed' }); }
+});
+
+// ── Macro rates sidebar ───────────────────────────────────────────────────────
+app.get('/api/macro/rates', async (_req, res) => {
+  try {
+    res.json(await getMacroRates());
+  } catch { res.status(500).json({ error: 'macro rates failed' }); }
+});
+
+// ── Daily brief (live news-driven, no mock copy) ──────────────────────────────
+app.get('/api/brief/today', async (_req, res) => {
+  try {
+    const [newsRes, macro] = await Promise.all([
+      fh.get('/news', { params: { category: 'general' } }).catch(() => ({ data: [] })),
+      getMacroRates(),
+    ]);
+    const headlines = (newsRes.data as any[]).slice(0, 8).map((n) => ({
+      headline: n.headline,
+      source: n.source,
+      url: n.url,
+      datetime: n.datetime,
+    }));
+    res.json({
+      date: new Date().toISOString(),
+      delayNote: 'Live news · macro delayed 15 min',
+      headlines,
+      macro,
+      sections: headlines.length
+        ? [
+            {
+              tag: '◆ MARKET HEADLINES',
+              title: headlines[0]?.headline ?? 'Markets digest latest flow',
+              body: headlines.slice(0, 3).map((h) => `• ${h.headline} (${h.source})`).join('\n'),
+            },
+          ]
+        : [],
+    });
+  } catch { res.status(500).json({ error: 'brief failed' }); }
+});
+
+// ── Dark pool — no mock; honest unavailable until licensed feed ───────────────
+app.get('/api/darkpool', requirePlan('professional'), (_req, res) => {
+  res.json({
+    available: false,
+    records: [],
+    delayNote: 'Dark pool feed not configured',
+    message: 'Institutional dark pool data requires a licensed market data provider. Short interest metrics are available on the equity detail page.',
+    updatedAt: new Date().toISOString(),
+  });
+});
+
+// ── Banking credit health (live prices; CET1 requires FDIC feed) ────────────────
+app.get('/api/banking/credit-health', async (_req, res) => {
+  const banks = ['JPM', 'GS', 'MS', 'BAC', 'C', 'WFC'];
+  try {
+    const quotes = await getQuotes(banks);
+    res.json({
+      delayNote: 'Live prices · regulatory ratios require FDIC integration',
+      updatedAt: new Date().toISOString(),
+      banks: banks.map((sym) => ({
+        sym,
+        price: quotes[sym]?.c ?? null,
+        changePct: quotes[sym]?.dp ?? null,
+      })),
+    });
+  } catch {
+    res.status(500).json({ error: 'credit health failed' });
+  }
+});
+
 app.post('/api/correlation', async (req, res) => {
   const { symbols } = req.body as { symbols: string[] };
   if (!symbols?.length) return res.status(400).json({ error: 'symbols required' });
@@ -351,13 +421,9 @@ app.post('/api/correlation', async (req, res) => {
 
 // ── Sector ETF quotes for rotation ───────────────────────────────────────────
 app.get('/api/sectors', async (_req, res) => {
-  const SECTORS = ['XLF','XLK','XLE','XLV','XLI','XLY','XLP','XLU','XLRE','XLB','XLC'];
   try {
-    const results = await Promise.all(SECTORS.map(async (s) => {
-      const { data } = await fh.get('/quote', { params: { symbol: s } });
-      return { symbol: s, ...data };
-    }));
-    res.json(results);
+    const results = await getSectorQuotes();
+    res.json({ data: results, delayNote: 'Delayed · 15 min', updatedAt: new Date().toISOString() });
   } catch { res.status(500).json({ error: 'sectors failed' }); }
 });
 
@@ -384,18 +450,64 @@ app.post('/api/stripe/checkout', authMiddleware as any, async (req: any, res) =>
 });
 
 app.post('/api/stripe/webhook', async (req, res) => {
-  if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) return res.json({ received: true });
+  if (!stripe || !config.stripe.webhookSecret) return res.json({ received: true });
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'] as string, process.env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'] as string, config.stripe.webhookSecret);
   } catch (e: any) { return res.status(400).json({ error: e.message }); }
-  if (event.type === 'checkout.session.completed') {
-    const s = event.data.object as Stripe.Checkout.Session;
-    const userId = s.metadata?.userId;
-    const plan   = s.metadata?.plan ?? 'pro';
+
+  const setPlan = (userId: string, plan: string) => {
     if (userId) db.prepare('UPDATE users SET plan = ?, trial_ends = NULL WHERE id = ?').run(plan, userId);
+  };
+
+  switch (event.type) {
+    case 'checkout.session.completed': {
+      const s = event.data.object as Stripe.Checkout.Session;
+      setPlan(s.metadata?.userId ?? '', s.metadata?.plan ?? 'pro');
+      break;
+    }
+    case 'customer.subscription.updated': {
+      const sub = event.data.object as Stripe.Subscription;
+      const userId = sub.metadata?.userId;
+      const plan = sub.metadata?.plan ?? 'pro';
+      if (sub.status === 'active' || sub.status === 'trialing') setPlan(userId ?? '', plan);
+      if (sub.status === 'canceled' || sub.status === 'unpaid') setPlan(userId ?? '', 'free');
+      break;
+    }
+    case 'customer.subscription.deleted': {
+      const sub = event.data.object as Stripe.Subscription;
+      setPlan(sub.metadata?.userId ?? '', 'free');
+      break;
+    }
+    case 'invoice.payment_failed': {
+      console.warn('[stripe] invoice payment failed', (event.data.object as Stripe.Invoice).id);
+      break;
+    }
+    default:
+      break;
   }
   res.json({ received: true });
+});
+
+app.post('/api/stripe/portal', authMiddleware as any, async (req: any, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
+  try {
+    const user = db.prepare('SELECT email FROM users WHERE id = ?').get(req.user.id) as { email: string } | undefined;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    let customerId = customers.data[0]?.id;
+    if (!customerId) {
+      const created = await stripe.customers.create({ email: user.email, metadata: { userId: req.user.id } });
+      customerId = created.id;
+    }
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${config.clientUrl}/dashboard`,
+    });
+    res.json({ url: session.url });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ── Daily brief preferences ────────────────────────────────────────────────────
@@ -454,5 +566,6 @@ const PORT = Number(process.env.PORT ?? 3001);
 server.listen(PORT, () => {
   console.log(`◆ WallSt Watch server on http://localhost:${PORT}`);
   seedDemoUser();
+  seedReviewUser();
   startDailyBriefScheduler();
 });
